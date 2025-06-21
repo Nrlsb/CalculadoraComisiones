@@ -143,13 +143,15 @@
                 fileReader.onload = async function() {
                     const typedarray = new Uint8Array(this.result);
                     try {
+                        // Solo procesamos la primera página (ORIGINAL)
                         const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                        let fullText = '';
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const textContent = await page.getTextContent();
-                            fullText += textContent.items.map(item => item.str).join(' ');
+                        if (pdf.numPages === 0) {
+                            reject(new Error("El PDF no tiene páginas."));
+                            return;
                         }
+                        const page = await pdf.getPage(1);
+                        const textContent = await page.getTextContent();
+                        const fullText = textContent.items.map(item => item.str).join(' ');
                         resolve(fullText);
                     } catch (error) { reject(error); }
                 };
@@ -163,7 +165,20 @@
                 return;
             }
 
-            const prompt = `Del texto de una factura, extrae: 1. El monto total final. 2. La cantidad total de artículos. Devuelve un JSON con claves "montoVenta" y "cantidadArticulos". Usa null si un valor no se encuentra. Texto: --- ${text.substring(0, 8000)} ---`;
+            // Prompt mejorado para ser más específico con el formato de la factura
+            const prompt = `
+                Del siguiente texto extraído de la PRIMERA PÁGINA de una factura (el "ORIGINAL"), necesito que extraigas dos datos clave:
+                1.  **cantidadArticulos**: Busca la columna o campo llamado "Cantidad". Suma todos los valores numéricos que encuentres en esa columna. Si solo hay un artículo, el valor será el de esa única fila.
+                2.  **montoVenta**: Busca el campo etiquetado como "TOTAL" que aparece al final del resumen de la factura (después de Subtotal, IVA, etc.). Extrae el valor numérico final asociado a esa etiqueta "TOTAL". El número puede usar una coma como separador decimal.
+
+                Devuelve únicamente un objeto JSON con las claves "montoVenta" y "cantidadArticulos".
+                Si no encuentras alguno de los valores, usa null para esa clave.
+
+                Texto de la factura:
+                ---
+                ${text.substring(0, 8000)}
+                ---
+            `;
             
             const payload = {
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -176,17 +191,24 @@
 
             try {
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`Error en la API: ${response.statusText}`);
+                if (!response.ok) throw new Error(`Error en la API: ${response.status} ${response.statusText}`);
                 const result = await response.json();
-                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts[0]) {
                     const jsonResponse = JSON.parse(result.candidates[0].content.parts[0].text);
                     if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
                     if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
                     pdfStatus.textContent = '✅ ¡Información extraída con éxito!';
-                } else { throw new Error("La respuesta de la IA no tuvo el formato esperado."); }
+                } else { 
+                    // Si la respuesta de la IA no es la esperada, revisamos el contenido
+                    console.log('Respuesta inesperada de la IA:', result);
+                    if (result.candidates && result.candidates[0].finishReason !== 'STOP') {
+                        throw new Error(`La IA se detuvo por una razón inesperada: ${result.candidates[0].finishReason}`);
+                    }
+                    throw new Error("La respuesta de la IA no tuvo el formato esperado.");
+                }
             } catch(error) {
                 console.error("Error llamando a la IA:", error);
-                mostrarError("La IA no pudo extraer los datos. Revisa que tu API Key sea correcta.");
+                mostrarError("La IA no pudo extraer los datos. Revisa que tu API Key sea correcta y que el PDF sea legible.");
                 pdfStatus.textContent = "Error en el análisis.";
             }
         }
@@ -218,4 +240,3 @@
     </script>
 </body>
 </html>
-
