@@ -24,63 +24,46 @@
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
-    <div class="w-full max-w-xl mx-auto space-y-8">
+    <div class="w-full max-w-4xl mx-auto space-y-8">
         <!-- Calculadora Principal -->
         <div class="bg-white rounded-xl shadow-lg relative">
             <button id="settings-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </button>
             <div id="settings-panel" class="p-8 space-y-4 bg-gray-50 rounded-t-xl hidden">
-                <h2 class="text-xl font-bold text-gray-800 text-center">Configuración</h2>
-                <div><label for="apiKey" class="text-sm font-medium text-gray-700 block mb-2">Tu API Key de Google AI</label><input type="password" id="apiKey" placeholder="Pega tu clave de API aquí" class="w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><p class="text-xs text-gray-500 mt-1">Tu clave se guarda en tu navegador. <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Obtén una clave aquí</a>.</p></div>
-                <button id="saveApiBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Guardar Clave</button>
+                 <h2 class="text-xl font-bold text-gray-800 text-center">Configuración</h2>
+                 <div><label for="apiKey" class="text-sm font-medium text-gray-700 block mb-2">Tu API Key de Google AI</label><input type="password" id="apiKey" placeholder="Pega tu clave de API aquí" class="w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><p class="text-xs text-gray-500 mt-1">Tu clave se guarda en tu navegador. <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Obtén una clave aquí</a>.</p></div>
+                 <button id="saveApiBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Guardar Clave</button>
             </div>
             <div class="p-8 space-y-6">
                 <div class="text-center"><h1 class="text-3xl font-bold text-gray-800">Calculadora de Comisiones</h1><p class="text-gray-500 mt-2">Ingresa los datos o carga un PDF para que la IA los extraiga.</p></div>
                 <div><label for="pdfUpload" id="pdfUploadLabel" class="w-full cursor-pointer bg-gray-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-900 flex items-center justify-center gap-2 transition-all duration-300"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg><span>Cargar Factura en PDF</span></label><input type="file" id="pdfUpload" accept="application/pdf" disabled><p id="pdf-status" class="text-center text-sm text-gray-500 mt-2"></p></div>
                 <div class="relative py-2"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div><div class="relative flex justify-center"><span class="bg-white px-2 text-sm text-gray-500">O ingresa manualmente</span></div></div>
-                <div class="space-y-4"><div><label for="montoVenta" class="text-sm font-medium text-gray-700 block mb-2">Monto final de la venta ($)</label><input type="number" id="montoVenta" placeholder="Ej: 150000" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div><div><label for="cantidadArticulos" class="text-sm font-medium text-gray-700 block mb-2">Cantidad de artículos vendidos</label><input type="number" id="cantidadArticulos" placeholder="Ej: 5" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div></div>
-                <div><button id="calcularBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">Calcular y Agregar</button></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="numeroFacturaInput" class="text-sm font-medium text-gray-700 block mb-2">N° de Factura</label><input type="text" id="numeroFacturaInput" placeholder="Ej: 0062-00021241" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label for="clienteInput" class="text-sm font-medium text-gray-700 block mb-2">Cliente</label><input type="text" id="clienteInput" placeholder="Ej: 5 EMES COMERCIAL SA" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label for="montoVenta" class="text-sm font-medium text-gray-700 block mb-2">Monto final de la venta ($)</label><input type="number" id="montoVenta" placeholder="Ej: 8507.78" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label for="cantidadArticulos" class="text-sm font-medium text-gray-700 block mb-2">Cantidad de artículos</label><input type="number" id="cantidadArticulos" placeholder="Ej: 1" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                </div>
+                <div><button id="calcularBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 mt-4">Calcular y Agregar</button></div>
                 <div id="resultado" class="pt-4 text-center"></div>
             </div>
         </div>
 
         <!-- Historial de Comisiones -->
         <div id="history-container" class="bg-white rounded-xl shadow-lg p-8 space-y-4">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-gray-800">Historial de Comisiones</h2>
-                <button id="clearHistoryBtn" class="text-sm text-red-500 hover:text-red-700 hover:underline">Borrar Historial</button>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Venta</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artículos</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comisión</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body" class="bg-white divide-y divide-gray-200">
-                        <!-- Las filas del historial se insertarán aquí -->
-                    </tbody>
-                    <tfoot class="bg-gray-50">
-                        <tr>
-                            <th scope="row" colspan="2" class="px-6 py-3 text-right text-sm font-bold text-gray-800 uppercase tracking-wider">Total</th>
-                            <td id="history-total" class="px-6 py-3 text-left text-sm font-bold text-gray-800"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-                 <p id="empty-history" class="text-center text-gray-500 py-8">No hay comisiones registradas.</p>
-            </div>
+            <div class="flex justify-between items-center"><h2 class="text-2xl font-bold text-gray-800">Historial de Comisiones</h2><button id="clearHistoryBtn" class="text-sm text-red-500 hover:text-red-700 hover:underline">Borrar Historial</button></div>
+            <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Factura</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Venta</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artículos</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comisión</th></tr></thead><tbody id="history-body" class="bg-white divide-y divide-gray-200"></tbody><tfoot class="bg-gray-50"><tr><th scope="row" colspan="4" class="px-6 py-3 text-right text-sm font-bold text-gray-800 uppercase tracking-wider">Total</th><td id="history-total" class="px-6 py-3 text-left text-sm font-bold text-gray-800"></td></tr></tfoot></table><p id="empty-history" class="text-center text-gray-500 py-8">No hay comisiones registradas.</p></div>
         </div>
     </div>
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
 
-        // Referencias del DOM
         const montoVentaInput = document.getElementById('montoVenta');
         const cantidadArticulosInput = document.getElementById('cantidadArticulos');
+        const numeroFacturaInput = document.getElementById('numeroFacturaInput');
+        const clienteInput = document.getElementById('clienteInput');
         const calcularBtn = document.getElementById('calcularBtn');
         const resultadoDiv = document.getElementById('resultado');
         const pdfUploadInput = document.getElementById('pdfUpload');
@@ -96,31 +79,26 @@
         const historyTable = document.querySelector('#history-container table');
         const emptyHistoryMsg = document.getElementById('empty-history');
         
-        // Estado de la aplicación
         let apiKey = '';
         let commissionHistory = [];
 
-        // --- Funciones del Historial ---
-
-        function formatCurrency(value) {
-            return value.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
-        }
+        function formatCurrency(value) { return value.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }); }
 
         function renderHistory() {
-            historyBody.innerHTML = ''; // Limpiar tabla
+            historyBody.innerHTML = '';
             if (commissionHistory.length === 0) {
                 historyTable.classList.add('hidden');
                 emptyHistoryMsg.classList.remove('hidden');
                 return;
             }
-            
             historyTable.classList.remove('hidden');
             emptyHistoryMsg.classList.add('hidden');
-
             let total = 0;
             commissionHistory.forEach(item => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.numeroFactura || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.nombreCliente || '-'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatCurrency(item.montoVenta)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.cantidadArticulos}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCurrency(item.comisionCalculada)}</td>
@@ -131,15 +109,11 @@
             historyTotal.textContent = formatCurrency(total);
         }
         
-        function saveHistory() {
-            localStorage.setItem('commissionHistory', JSON.stringify(commissionHistory));
-        }
+        function saveHistory() { localStorage.setItem('commissionHistory', JSON.stringify(commissionHistory)); }
 
         function loadHistory() {
             const savedHistory = localStorage.getItem('commissionHistory');
-            if (savedHistory) {
-                commissionHistory = JSON.parse(savedHistory);
-            }
+            if (savedHistory) commissionHistory = JSON.parse(savedHistory);
             renderHistory();
         }
 
@@ -148,20 +122,22 @@
             saveHistory();
             renderHistory();
         });
-
-
-        // --- Lógica de la Calculadora ---
         
         function calcularComision() {
             resultadoDiv.innerHTML = '';
             const montoVenta = parseFloat(montoVentaInput.value);
             const cantidadArticulos = parseInt(cantidadArticulosInput.value, 10);
+            const numeroFactura = numeroFacturaInput.value.trim();
+            const nombreCliente = clienteInput.value.trim();
+            
             if (isNaN(montoVenta) || montoVenta <= 0) { mostrarError('Ingresa un monto de venta válido.'); return; }
             if (isNaN(cantidadArticulos) || cantidadArticulos < 0) { mostrarError('Ingresa una cantidad de artículos válida.'); return; }
+
             const comisionTotal = (montoVenta * 0.8266 * 0.007) + (cantidadArticulos * 20);
             
-            // Agregar al historial
             commissionHistory.push({
+                numeroFactura: numeroFactura,
+                nombreCliente: nombreCliente,
                 montoVenta: montoVenta,
                 cantidadArticulos: cantidadArticulos,
                 comisionCalculada: comisionTotal
@@ -169,13 +145,13 @@
             saveHistory();
             renderHistory();
             
-            // Mostrar resultado del último cálculo
             mostrarResultado(comisionTotal);
 
-            // Limpiar inputs
             montoVentaInput.value = '';
             cantidadArticulosInput.value = '';
-            montoVentaInput.focus();
+            numeroFacturaInput.value = '';
+            clienteInput.value = '';
+            numeroFacturaInput.focus();
         }
 
         function mostrarResultado(comision) {
@@ -185,8 +161,6 @@
         function mostrarError(mensaje) {
             resultadoDiv.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg fade-in"><p class="font-semibold">Error</p><p>${mensaje}</p></div>`;
         }
-        
-        // ... (resto de funciones de IA y configuración sin cambios) ...
         
         function checkApiKey() {
             apiKey = localStorage.getItem('googleApiKey');
@@ -205,23 +179,20 @@
 
         settingsBtn.addEventListener('click', () => {
             settingsPanel.classList.toggle('hidden');
-            if (!settingsPanel.classList.contains('hidden')) {
-                apiKeyInput.value = localStorage.getItem('googleApiKey') || '';
-            }
+            if (!settingsPanel.classList.contains('hidden')) apiKeyInput.value = localStorage.getItem('googleApiKey') || '';
         });
 
         saveApiBtn.addEventListener('click', () => {
             const newApiKey = apiKeyInput.value.trim();
             if (newApiKey) {
                 localStorage.setItem('googleApiKey', newApiKey);
-                checkApiKey();
-                settingsPanel.classList.add('hidden');
                 pdfStatus.textContent = '✅ Clave guardada. ¡IA activada!';
             } else {
                 localStorage.removeItem('googleApiKey');
-                checkApiKey();
                 pdfStatus.textContent = 'Clave eliminada. La IA está desactivada.';
             }
+            checkApiKey();
+            settingsPanel.classList.add('hidden');
         });
 
         pdfUploadInput.addEventListener('change', async (event) => {
@@ -259,10 +230,32 @@
         
         async function extractInfoWithAI(text) {
             if (!apiKey) { mostrarError("No hay una API Key configurada para la IA."); return; }
-            const prompt = `Del siguiente texto de una factura, extrae "Cantidad" y "TOTAL". Devuelve un JSON con "montoVenta" y "cantidadArticulos". Texto: --- ${text.substring(0, 8000)} ---`;
+            
+            const prompt = `
+                Del siguiente texto extraído de una factura, extrae estos 4 datos:
+                1.  numeroFactura: El valor que sigue a la etiqueta "N° :".
+                2.  nombreCliente: El texto que sigue a la etiqueta "Sr./es . :". Ignora el código numérico que pueda aparecer antes del nombre.
+                3.  cantidadArticulos: La suma de los valores en la columna "Cantidad".
+                4.  montoVenta: El valor numérico final asociado a la etiqueta "TOTAL".
+
+                Devuelve un JSON con claves "numeroFactura", "nombreCliente", "cantidadArticulos", y "montoVenta". Usa null si un valor no se encuentra. Texto:
+                --- ${text.substring(0, 8000)} ---
+            `;
+            
             const payload = {
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { montoVenta: { type: "NUMBER" }, cantidadArticulos: { type: "NUMBER" } } } },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            numeroFactura: { type: "STRING" },
+                            nombreCliente: { type: "STRING" },
+                            montoVenta: { type: "NUMBER" },
+                            cantidadArticulos: { type: "NUMBER" }
+                        }
+                    }
+                },
             };
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             try {
@@ -273,6 +266,8 @@
                     const jsonResponse = JSON.parse(result.candidates[0].content.parts[0].text);
                     if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
                     if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
+                    if (jsonResponse.numeroFactura != null) numeroFacturaInput.value = jsonResponse.numeroFactura;
+                    if (jsonResponse.nombreCliente != null) clienteInput.value = jsonResponse.nombreCliente;
                     pdfStatus.textContent = '✅ ¡Información extraída con éxito!';
                 } else { throw new Error("La respuesta de la IA no tuvo el formato esperado."); }
             } catch(error) {
@@ -282,9 +277,7 @@
             }
         }
         
-        // Eventos y carga inicial
         calcularBtn.addEventListener('click', calcularComision);
-        montoVentaInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') cantidadArticulosInput.focus(); });
         cantidadArticulosInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') calcularBtn.click(); });
         document.addEventListener('DOMContentLoaded', () => {
             checkApiKey();
