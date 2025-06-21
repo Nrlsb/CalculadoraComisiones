@@ -25,7 +25,6 @@
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-4xl mx-auto space-y-8">
-        <!-- Calculadora Principal -->
         <div class="bg-white rounded-xl shadow-lg relative">
             <button id="settings-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -40,17 +39,16 @@
                 <div><label for="pdfUpload" id="pdfUploadLabel" class="w-full cursor-pointer bg-gray-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-900 flex items-center justify-center gap-2 transition-all duration-300"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg><span>Cargar Factura en PDF</span></label><input type="file" id="pdfUpload" accept="application/pdf" disabled><p id="pdf-status" class="text-center text-sm text-gray-500 mt-2"></p></div>
                 <div class="relative py-2"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div><div class="relative flex justify-center"><span class="bg-white px-2 text-sm text-gray-500">O ingresa manualmente</span></div></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label for="numeroFacturaInput" class="text-sm font-medium text-gray-700 block mb-2">N° de Factura</label><input type="text" id="numeroFacturaInput" placeholder="Ej: 0062-00021241" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label for="numeroFacturaInput" class="text-sm font-medium text-gray-700 block mb-2">N° de Factura (Opcional)</label><input type="text" id="numeroFacturaInput" placeholder="Ej: 0062-00021241" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
                     <div><label for="clienteInput" class="text-sm font-medium text-gray-700 block mb-2">Cliente (Opcional)</label><input type="text" id="clienteInput" placeholder="Ej: 5 EMES COMERCIAL SA" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
-                    <div><label for="montoVenta" class="text-sm font-medium text-gray-700 block mb-2">Monto final de la venta ($)</label><input type="number" id="montoVenta" placeholder="Ej: 8507.78" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
-                    <div><label for="cantidadArticulos" class="text-sm font-medium text-gray-700 block mb-2">Cantidad de artículos</label><input type="number" id="cantidadArticulos" placeholder="Ej: 1" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label for="montoVenta" class="text-sm font-medium text-gray-700 block mb-2">Monto final de la venta ($)</label><input type="number" id="montoVenta" placeholder="Ej: 13227.71" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label for="cantidadArticulos" class="text-sm font-medium text-gray-700 block mb-2">Cantidad de artículos</label><input type="number" id="cantidadArticulos" placeholder="Ej: 2" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
                 </div>
                 <div><button id="calcularBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 mt-4">Calcular y Agregar</button></div>
                 <div id="resultado" class="pt-4 text-center"></div>
             </div>
         </div>
 
-        <!-- Historial de Comisiones -->
         <div id="history-container" class="bg-white rounded-xl shadow-lg p-8 space-y-4">
             <div class="flex justify-between items-center"><h2 class="text-2xl font-bold text-gray-800">Historial de Comisiones</h2><button id="clearHistoryBtn" class="text-sm text-red-500 hover:text-red-700 hover:underline">Borrar Historial</button></div>
             <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Factura</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Venta</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artículos</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comisión</th></tr></thead><tbody id="history-body" class="bg-white divide-y divide-gray-200"></tbody><tfoot class="bg-gray-50"><tr><th scope="row" colspan="4" class="px-6 py-3 text-right text-sm font-bold text-gray-800 uppercase tracking-wider">Total</th><td id="history-total" class="px-6 py-3 text-left text-sm font-bold text-gray-800"></td></tr></tfoot></table><p id="empty-history" class="text-center text-gray-500 py-8">No hay comisiones registradas.</p></div>
@@ -231,17 +229,15 @@
         async function extractInfoWithAI(text) {
             if (!apiKey) { mostrarError("No hay una API Key configurada para la IA."); return; }
             
-            // --- PROMPT MODIFICADO PARA QUITAR EL CLIENTE ---
+            // --- PROMPT MODIFICADO PARA QUITAR N° de Factura ---
             const prompt = `
-                Analiza el siguiente texto de una factura para extraer 3 campos específicos. Sigue estas reglas al pie de la letra:
+                Analiza el siguiente texto de una factura para extraer 2 campos específicos. Sigue estas reglas al pie de la letra:
 
-                1.  **numeroFactura**: Encuentra la etiqueta "N° :". El valor que buscas es el código que sigue inmediatamente, como "0062-00021228".
+                1.  **cantidadArticulos**: Busca la tabla de productos que contiene una columna llamada "Cantidad". Debes sumar todos los números que aparezcan en esa columna. Por ejemplo, si bajo "Cantidad" hay un "1" y en otra fila otro "1", el total es 2.
 
-                2.  **cantidadArticulos**: Busca la tabla de productos que contiene una columna llamada "Cantidad". Debes sumar todos los números que aparezcan en esa columna. Por ejemplo, si bajo "Cantidad" hay un "1" y en otra fila otro "1", el total es 2.
+                2.  **montoVenta**: Al final del documento, en la sección de totales, busca la palabra "TOTAL" en mayúsculas. El valor que necesitas es el importe numérico que está en la misma línea que esa palabra. Ejemplo: "TOTAL 13227,71". El monto es 13227.71. Asegúrate de tratar la coma como separador decimal.
 
-                3.  **montoVenta**: Al final del documento, en la sección de totales, busca la palabra "TOTAL" en mayúsculas. El valor que necesitas es el importe numérico que está en la misma línea que esa palabra. Ejemplo: "TOTAL 13227,71". El monto es 13227.71. Asegúrate de tratar la coma como separador decimal.
-
-                Devuelve un objeto JSON con las claves "numeroFactura", "cantidadArticulos" y "montoVenta". Si algún dato no se encuentra, su valor debe ser null.
+                Devuelve un objeto JSON con las claves "cantidadArticulos" y "montoVenta". Si algún dato no se encuentra, su valor debe ser null.
 
                 Texto de la factura para analizar:
                 ---
@@ -256,7 +252,6 @@
                     responseSchema: {
                         type: "OBJECT",
                         properties: {
-                            numeroFactura: { type: "STRING" },
                             montoVenta: { type: "NUMBER" },
                             cantidadArticulos: { type: "NUMBER" }
                         }
@@ -272,8 +267,7 @@
                     const jsonResponse = JSON.parse(result.candidates[0].content.parts[0].text);
                     if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
                     if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
-                    if (jsonResponse.numeroFactura != null) numeroFacturaInput.value = jsonResponse.numeroFactura;
-                    // Se quita la línea que llenaba el cliente
+                    // Se quita la línea que llenaba el N° de Factura
                     pdfStatus.textContent = '✅ ¡Información extraída con éxito!';
                 } else { throw new Error("La respuesta de la IA no tuvo el formato esperado."); }
             } catch(error) {
@@ -292,4 +286,3 @@
     </script>
 </body>
 </html>
-
