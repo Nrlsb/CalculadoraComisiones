@@ -41,7 +41,7 @@
                 <div class="relative py-2"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div><div class="relative flex justify-center"><span class="bg-white px-2 text-sm text-gray-500">O ingresa manualmente</span></div></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><label for="numeroFacturaInput" class="text-sm font-medium text-gray-700 block mb-2">N° de Factura</label><input type="text" id="numeroFacturaInput" placeholder="Ej: 0062-00021241" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
-                    <div><label for="clienteInput" class="text-sm font-medium text-gray-700 block mb-2">Cliente</label><input type="text" id="clienteInput" placeholder="Ej: 5 EMES COMERCIAL SA" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label for="clienteInput" class="text-sm font-medium text-gray-700 block mb-2">Cliente (Opcional)</label><input type="text" id="clienteInput" placeholder="Ej: 5 EMES COMERCIAL SA" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
                     <div><label for="montoVenta" class="text-sm font-medium text-gray-700 block mb-2">Monto final de la venta ($)</label><input type="number" id="montoVenta" placeholder="Ej: 8507.78" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
                     <div><label for="cantidadArticulos" class="text-sm font-medium text-gray-700 block mb-2">Cantidad de artículos</label><input type="number" id="cantidadArticulos" placeholder="Ej: 1" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
                 </div>
@@ -231,19 +231,17 @@
         async function extractInfoWithAI(text) {
             if (!apiKey) { mostrarError("No hay una API Key configurada para la IA."); return; }
             
-            // --- PROMPT MEJORADO CON LAS INSTRUCCIONES VISUALES ---
+            // --- PROMPT MODIFICADO PARA QUITAR EL CLIENTE ---
             const prompt = `
-                Analiza el siguiente texto de una factura para extraer 4 campos específicos. Sigue estas reglas al pie de la letra:
+                Analiza el siguiente texto de una factura para extraer 3 campos específicos. Sigue estas reglas al pie de la letra:
 
                 1.  **numeroFactura**: Encuentra la etiqueta "N° :". El valor que buscas es el código que sigue inmediatamente, como "0062-00021228".
 
-                2.  **nombreCliente**: Encuentra la etiqueta "Sr./es . :". Justo después, puede haber un código numérico (ej: "036777"). Ignóralo. El nombre del cliente es todo el texto que viene a continuación hasta la siguiente etiqueta como "Cuit :". En el ejemplo "Sr./es . : 036777 5 EMES COMERCIAL SA Cuit :", el cliente es "5 EMES COMERCIAL SA".
+                2.  **cantidadArticulos**: Busca la tabla de productos que contiene una columna llamada "Cantidad". Debes sumar todos los números que aparezcan en esa columna. Por ejemplo, si bajo "Cantidad" hay un "1" y en otra fila otro "1", el total es 2.
 
-                3.  **cantidadArticulos**: Busca la tabla de productos que contiene una columna llamada "Cantidad". Debes sumar todos los números que aparezcan en esa columna. Por ejemplo, si bajo "Cantidad" hay un "1" y en otra fila otro "1", el total es 2.
+                3.  **montoVenta**: Al final del documento, en la sección de totales, busca la palabra "TOTAL" en mayúsculas. El valor que necesitas es el importe numérico que está en la misma línea que esa palabra. Ejemplo: "TOTAL 13227,71". El monto es 13227.71. Asegúrate de tratar la coma como separador decimal.
 
-                4.  **montoVenta**: Al final del documento, en la sección de totales, busca la palabra "TOTAL" en mayúsculas. El valor que necesitas es el importe numérico que está en la misma línea que esa palabra. Ejemplo: "TOTAL 13227,71". El monto es 13227.71. Asegúrate de tratar la coma como separador decimal.
-
-                Devuelve un objeto JSON con las claves "numeroFactura", "nombreCliente", "cantidadArticulos" y "montoVenta". Si algún dato no se encuentra, su valor debe ser null.
+                Devuelve un objeto JSON con las claves "numeroFactura", "cantidadArticulos" y "montoVenta". Si algún dato no se encuentra, su valor debe ser null.
 
                 Texto de la factura para analizar:
                 ---
@@ -259,7 +257,6 @@
                         type: "OBJECT",
                         properties: {
                             numeroFactura: { type: "STRING" },
-                            nombreCliente: { type: "STRING" },
                             montoVenta: { type: "NUMBER" },
                             cantidadArticulos: { type: "NUMBER" }
                         }
@@ -276,7 +273,7 @@
                     if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
                     if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
                     if (jsonResponse.numeroFactura != null) numeroFacturaInput.value = jsonResponse.numeroFactura;
-                    if (jsonResponse.nombreCliente != null) clienteInput.value = jsonResponse.nombreCliente;
+                    // Se quita la línea que llenaba el cliente
                     pdfStatus.textContent = '✅ ¡Información extraída con éxito!';
                 } else { throw new Error("La respuesta de la IA no tuvo el formato esperado."); }
             } catch(error) {
