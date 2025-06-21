@@ -231,18 +231,24 @@
         async function extractInfoWithAI(text) {
             if (!apiKey) { mostrarError("No hay una API Key configurada para la IA."); return; }
             
-            // --- PROMPT MEJORADO ---
+            // --- PROMPT MEJORADO CON LAS INSTRUCCIONES VISUALES ---
             const prompt = `
-                Analiza el siguiente texto de una factura y extrae 4 campos. El texto puede no tener un formato perfecto.
-                1.  **numeroFactura**: Busca el texto "N° :" y devuelve el valor que le sigue. Debería ser algo como "0062-00021241".
-                2.  **nombreCliente**: Busca el texto "Sr./es . :". Lo que sigue es el nombre del cliente. Puede haber un código numérico primero, el cual debes ignorar. El nombre del cliente es el texto que sigue a ese código. Por ejemplo, en "036777 5 EMES COMERCIAL SA", el cliente es "5 EMES COMERCIAL SA".
-                3.  **cantidadArticulos**: Busca la tabla de artículos, que tiene encabezados como "Código", "Descripción", "Cantidad". Suma todos los números que encuentres bajo el encabezado "Cantidad". Si solo hay un número, devuélvelo.
-                4.  **montoVenta**: Busca la palabra "TOTAL" cerca del final del documento, usualmente después de "SUBTOTAL" o "IVA". Devuelve el valor numérico que le corresponde. Este número puede tener una coma como separador decimal.
+                Analiza el siguiente texto de una factura para extraer 4 campos específicos. Sigue estas reglas al pie de la letra:
 
-                Devuelve un objeto JSON con las claves "numeroFactura", "nombreCliente", "cantidadArticulos", y "montoVenta". Si un valor no se puede encontrar, su valor debe ser null.
+                1.  **numeroFactura**: Encuentra la etiqueta "N° :". El valor que buscas es el código que sigue inmediatamente, como "0062-00021228".
 
-                Texto de la factura:
-                --- ${text.substring(0, 8000)} ---
+                2.  **nombreCliente**: Encuentra la etiqueta "Sr./es . :". Justo después, puede haber un código numérico (ej: "036777"). Ignóralo. El nombre del cliente es todo el texto que viene a continuación hasta la siguiente etiqueta como "Cuit :". En el ejemplo "Sr./es . : 036777 5 EMES COMERCIAL SA Cuit :", el cliente es "5 EMES COMERCIAL SA".
+
+                3.  **cantidadArticulos**: Busca la tabla de productos que contiene una columna llamada "Cantidad". Debes sumar todos los números que aparezcan en esa columna. Por ejemplo, si bajo "Cantidad" hay un "1" y en otra fila otro "1", el total es 2.
+
+                4.  **montoVenta**: Al final del documento, en la sección de totales, busca la palabra "TOTAL" en mayúsculas. El valor que necesitas es el importe numérico que está en la misma línea que esa palabra. Ejemplo: "TOTAL 13227,71". El monto es 13227.71. Asegúrate de tratar la coma como separador decimal.
+
+                Devuelve un objeto JSON con las claves "numeroFactura", "nombreCliente", "cantidadArticulos" y "montoVenta". Si algún dato no se encuentra, su valor debe ser null.
+
+                Texto de la factura para analizar:
+                ---
+                ${text.substring(0, 8000)}
+                ---
             `;
             
             const payload = {
@@ -275,7 +281,7 @@
                 } else { throw new Error("La respuesta de la IA no tuvo el formato esperado."); }
             } catch(error) {
                 console.error("Error llamando a la IA:", error);
-                mostrarError("La IA no pudo extraer los datos. Revisa tu API Key.");
+                mostrarError("La IA no pudo extraer los datos. Revisa tu API Key y el formato del PDF.");
                 pdfStatus.textContent = "Error en el análisis.";
             }
         }
@@ -289,3 +295,4 @@
     </script>
 </body>
 </html>
+
