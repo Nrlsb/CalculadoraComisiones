@@ -13,113 +13,126 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Oculta el input de archivo por defecto */
-        input[type="file"] {
-            display: none;
-        }
-        /* Animación para la aparición del resultado */
+        input[type="file"] { display: none; }
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        #settings-panel { transition: all 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
-    <div class="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 space-y-6">
-        
-        <!-- Encabezado -->
-        <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-800">Calculadora de Comisiones</h1>
-            <p class="text-gray-500 mt-2">Ingresa los datos manualmente o carga un PDF para que la IA los extraiga.</p>
+    <div class="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg relative">
+
+        <!-- Botón de Configuración -->
+        <button id="settings-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        </button>
+
+        <!-- Panel de Configuración (oculto por defecto) -->
+        <div id="settings-panel" class="p-8 space-y-4 bg-gray-50 rounded-t-xl hidden">
+             <h2 class="text-xl font-bold text-gray-800 text-center">Configuración</h2>
+             <div>
+                <label for="apiKey" class="text-sm font-medium text-gray-700 block mb-2">Tu API Key de Google AI</label>
+                <input type="password" id="apiKey" placeholder="Pega tu clave de API aquí" class="w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <p class="text-xs text-gray-500 mt-1">Tu clave se guarda en tu navegador. <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Obtén una clave aquí</a>.</p>
+             </div>
+             <button id="saveApiBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Guardar Clave</button>
         </div>
 
-        <!-- Carga de PDF con IA -->
-        <div>
-            <label for="pdfUpload" class="w-full cursor-pointer bg-gray-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 transition duration-300 ease-in-out flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-                <span>Cargar Factura en PDF</span>
-            </label>
-            <input type="file" id="pdfUpload" accept="application/pdf">
-            <p id="pdf-status" class="text-center text-sm text-gray-500 mt-2"></p>
-        </div>
-
-        <div class="relative py-2">
-            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                <div class="w-full border-t border-gray-300"></div>
+        <div class="p-8 space-y-6">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-gray-800">Calculadora de Comisiones</h1>
+                <p class="text-gray-500 mt-2">Ingresa los datos o carga un PDF para que la IA los extraiga.</p>
             </div>
-            <div class="relative flex justify-center">
-                <span class="bg-white px-2 text-sm text-gray-500">O ingresa manualmente</span>
-            </div>
-        </div>
-
-        <!-- Formulario Manual -->
-        <div class="space-y-4">
             <div>
-                <label for="montoVenta" class="text-sm font-medium text-gray-700 block mb-2">Monto final de la venta ($)</label>
-                <input type="number" id="montoVenta" placeholder="Ej: 150000" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                <label for="pdfUpload" id="pdfUploadLabel" class="w-full cursor-pointer bg-gray-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-900 flex items-center justify-center gap-2 transition-all duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    <span>Cargar Factura en PDF</span>
+                </label>
+                <input type="file" id="pdfUpload" accept="application/pdf" disabled>
+                <p id="pdf-status" class="text-center text-sm text-gray-500 mt-2"></p>
             </div>
-            
-            <div>
-                <label for="cantidadArticulos" class="text-sm font-medium text-gray-700 block mb-2">Cantidad de artículos vendidos</label>
-                <input type="number" id="cantidadArticulos" placeholder="Ej: 5" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+            <div class="relative py-2"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div><div class="relative flex justify-center"><span class="bg-white px-2 text-sm text-gray-500">O ingresa manualmente</span></div></div>
+            <div class="space-y-4">
+                <div><label for="montoVenta" class="text-sm font-medium text-gray-700 block mb-2">Monto final de la venta ($)</label><input type="number" id="montoVenta" placeholder="Ej: 150000" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
+                <div><label for="cantidadArticulos" class="text-sm font-medium text-gray-700 block mb-2">Cantidad de artículos vendidos</label><input type="number" id="cantidadArticulos" placeholder="Ej: 5" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
             </div>
+            <div><button id="calcularBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">Calcular Comisión</button></div>
+            <div id="resultado" class="pt-4 text-center"></div>
         </div>
-
-        <!-- Botón de cálculo -->
-        <div>
-            <button id="calcularBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-300 ease-in-out">
-                Calcular Comisión
-            </button>
-        </div>
-
-        <!-- Área de resultados -->
-        <div id="resultado" class="pt-4 text-center"></div>
-
     </div>
 
     <script>
-        // Configurar el worker para pdf.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
 
-        // Obtener referencias a los elementos del DOM
         const montoVentaInput = document.getElementById('montoVenta');
         const cantidadArticulosInput = document.getElementById('cantidadArticulos');
         const calcularBtn = document.getElementById('calcularBtn');
         const resultadoDiv = document.getElementById('resultado');
         const pdfUploadInput = document.getElementById('pdfUpload');
+        const pdfUploadLabel = document.getElementById('pdfUploadLabel');
         const pdfStatus = document.getElementById('pdf-status');
 
-        // --- Lógica de la IA y PDF ---
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const apiKeyInput = document.getElementById('apiKey');
+        const saveApiBtn = document.getElementById('saveApiBtn');
+        let apiKey = '';
+
+        function checkApiKey() {
+            apiKey = localStorage.getItem('googleApiKey');
+            if (apiKey) {
+                pdfUploadInput.disabled = false;
+                pdfUploadLabel.classList.remove('opacity-50', 'cursor-not-allowed');
+                pdfUploadLabel.classList.add('hover:bg-gray-900');
+                pdfStatus.textContent = 'IA lista para analizar PDFs.';
+            } else {
+                pdfUploadInput.disabled = true;
+                pdfUploadLabel.classList.add('opacity-50', 'cursor-not-allowed');
+                pdfUploadLabel.classList.remove('hover:bg-gray-900');
+                pdfStatus.textContent = 'Se necesita una API Key para usar la IA. Ve a ⚙️.';
+            }
+        }
+
+        settingsBtn.addEventListener('click', () => {
+            settingsPanel.classList.toggle('hidden');
+            if (!settingsPanel.classList.contains('hidden')) {
+                apiKeyInput.value = localStorage.getItem('googleApiKey') || '';
+            }
+        });
+
+        saveApiBtn.addEventListener('click', () => {
+            const newApiKey = apiKeyInput.value.trim();
+            if (newApiKey) {
+                localStorage.setItem('googleApiKey', newApiKey);
+                checkApiKey();
+                settingsPanel.classList.add('hidden');
+                pdfStatus.textContent = '✅ Clave guardada. ¡IA activada!';
+            } else {
+                localStorage.removeItem('googleApiKey');
+                checkApiKey();
+                pdfStatus.textContent = 'Clave eliminada. La IA está desactivada.';
+            }
+        });
 
         pdfUploadInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
-            if (!file || file.type !== 'application/pdf') {
-                pdfStatus.textContent = 'Por favor, selecciona un archivo PDF.';
-                return;
-            }
-
+            if (!file || file.type !== 'application/pdf') return;
             pdfStatus.textContent = '📖 Leyendo PDF...';
-            resultadoDiv.innerHTML = ''; // Limpiar resultados anteriores
-
+            resultadoDiv.innerHTML = '';
             try {
                 const pdfText = await extractTextFromPdf(file);
                 pdfStatus.textContent = '🧠 Analizando información...';
                 await extractInfoWithAI(pdfText);
             } catch (error) {
                 console.error('Error procesando el PDF:', error);
-                mostrarError('No se pudo leer el archivo PDF. Inténtalo de nuevo.');
+                mostrarError('No se pudo leer el archivo PDF.');
                 pdfStatus.textContent = 'Error al leer el PDF.';
             }
         });
@@ -138,133 +151,71 @@
                             fullText += textContent.items.map(item => item.str).join(' ');
                         }
                         resolve(fullText);
-                    } catch (error) {
-                        reject(error);
-                    }
+                    } catch (error) { reject(error); }
                 };
                 fileReader.readAsArrayBuffer(file);
             });
         }
         
         async function extractInfoWithAI(text) {
-            const prompt = `
-                Del siguiente texto extraído de una factura, necesito que identifiques dos valores específicos:
-                1.  El monto total final de la venta.
-                2.  La cantidad total de artículos o productos vendidos.
+            if (!apiKey) {
+                mostrarError("No hay una API Key configurada para la IA.");
+                return;
+            }
 
-                Devuelve únicamente un objeto JSON con las claves "montoVenta" y "cantidadArticulos".
-                Si no encuentras alguno de los valores, usa null para esa clave.
-
-                Texto de la factura:
-                ---
-                ${text.substring(0, 8000)}
-                ---
-            `;
+            const prompt = `Del texto de una factura, extrae: 1. El monto total final. 2. La cantidad total de artículos. Devuelve un JSON con claves "montoVenta" y "cantidadArticulos". Usa null si un valor no se encuentra. Texto: --- ${text.substring(0, 8000)} ---`;
             
-            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = {
-                contents: chatHistory,
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            montoVenta: { type: "NUMBER" },
-                            cantidadArticulos: { type: "NUMBER" },
-                        },
-                    },
+                    responseSchema: { type: "OBJECT", properties: { montoVenta: { type: "NUMBER" }, cantidadArticulos: { type: "NUMBER" } } },
                 },
             };
-            const apiKey = ""; // La API Key se gestiona automáticamente en este entorno
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Error en la API: ${response.statusText}`);
-                }
-
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`Error en la API: ${response.statusText}`);
                 const result = await response.json();
-                
                 if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
                     const jsonResponse = JSON.parse(result.candidates[0].content.parts[0].text);
-                    
-                    if (jsonResponse.montoVenta) {
-                        montoVentaInput.value = jsonResponse.montoVenta;
-                    }
-                    if (jsonResponse.cantidadArticulos) {
-                        cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
-                    }
+                    if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
+                    if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
                     pdfStatus.textContent = '✅ ¡Información extraída con éxito!';
-                } else {
-                    throw new Error("La respuesta de la IA no tuvo el formato esperado.");
-                }
-
+                } else { throw new Error("La respuesta de la IA no tuvo el formato esperado."); }
             } catch(error) {
                 console.error("Error llamando a la IA:", error);
-                mostrarError("La IA no pudo extraer los datos. Por favor, ingrésalos manualmente.");
+                mostrarError("La IA no pudo extraer los datos. Revisa que tu API Key sea correcta.");
                 pdfStatus.textContent = "Error en el análisis.";
             }
         }
-
-
-        // --- Lógica del cálculo ---
         
         function calcularComision() {
             resultadoDiv.innerHTML = '';
             const montoVenta = parseFloat(montoVentaInput.value);
             const cantidadArticulos = parseInt(cantidadArticulosInput.value, 10);
-
-            if (isNaN(montoVenta) || montoVenta <= 0) {
-                mostrarError('Por favor, ingresa un monto de venta válido.');
-                return;
-            }
-            if (isNaN(cantidadArticulos) || cantidadArticulos < 0) {
-                mostrarError('Por favor, ingresa una cantidad de artículos válida.');
-                return;
-            }
-
-            const comisionBase = montoVenta * 0.1734;
-            const comisionPorcentual = comisionBase * 0.007;
-            const comisionPorArticulo = cantidadArticulos * 20;
-            const comisionTotal = comisionPorcentual + comisionPorArticulo;
-
+            if (isNaN(montoVenta) || montoVenta <= 0) { mostrarError('Ingresa un monto de venta válido.'); return; }
+            if (isNaN(cantidadArticulos) || cantidadArticulos < 0) { mostrarError('Ingresa una cantidad de artículos válida.'); return; }
+            const comisionTotal = (montoVenta * 0.1734 * 0.007) + (cantidadArticulos * 20);
             mostrarResultado(comisionTotal);
         }
         
         function mostrarResultado(comision) {
-            const resultadoHTML = `
-                <div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-4 rounded-lg fade-in">
-                    <p class="font-semibold">Comisión Total a Pagar:</p>
-                    <p class="text-3xl font-bold mt-1">$${comision.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                </div>
-            `;
-            resultadoDiv.innerHTML = resultadoHTML;
+            resultadoDiv.innerHTML = `<div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-4 rounded-lg fade-in"><p class="font-semibold">Comisión Total a Pagar:</p><p class="text-3xl font-bold mt-1">$${comision.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p></div>`;
         }
         
         function mostrarError(mensaje) {
-            const errorHTML = `
-                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg fade-in">
-                    <p class="font-semibold">Error</p>
-                    <p>${mensaje}</p>
-                </div>
-            `;
-            resultadoDiv.innerHTML = errorHTML;
+            resultadoDiv.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg fade-in"><p class="font-semibold">Error</p><p>${mensaje}</p></div>`;
         }
 
         calcularBtn.addEventListener('click', calcularComision);
-
-        montoVentaInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') calcularComision();
-        });
-        cantidadArticulosInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') calcularComision();
-        });
+        montoVentaInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') calcularComision(); });
+        cantidadArticulosInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') calcularComision(); });
+        
+        // Comprobar la clave de API al cargar la página
+        document.addEventListener('DOMContentLoaded', checkApiKey);
     </script>
 </body>
 </html>
+
