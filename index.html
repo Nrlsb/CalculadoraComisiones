@@ -231,14 +231,17 @@
         async function extractInfoWithAI(text) {
             if (!apiKey) { mostrarError("No hay una API Key configurada para la IA."); return; }
             
+            // --- PROMPT MEJORADO ---
             const prompt = `
-                Del siguiente texto extraído de una factura, extrae estos 4 datos:
-                1.  numeroFactura: El valor que sigue a la etiqueta "N° :".
-                2.  nombreCliente: El texto que sigue a la etiqueta "Sr./es . :". Ignora el código numérico que pueda aparecer antes del nombre.
-                3.  cantidadArticulos: La suma de los valores en la columna "Cantidad".
-                4.  montoVenta: El valor numérico final asociado a la etiqueta "TOTAL".
+                Analiza el siguiente texto de una factura y extrae 4 campos. El texto puede no tener un formato perfecto.
+                1.  **numeroFactura**: Busca el texto "N° :" y devuelve el valor que le sigue. Debería ser algo como "0062-00021241".
+                2.  **nombreCliente**: Busca el texto "Sr./es . :". Lo que sigue es el nombre del cliente. Puede haber un código numérico primero, el cual debes ignorar. El nombre del cliente es el texto que sigue a ese código. Por ejemplo, en "036777 5 EMES COMERCIAL SA", el cliente es "5 EMES COMERCIAL SA".
+                3.  **cantidadArticulos**: Busca la tabla de artículos, que tiene encabezados como "Código", "Descripción", "Cantidad". Suma todos los números que encuentres bajo el encabezado "Cantidad". Si solo hay un número, devuélvelo.
+                4.  **montoVenta**: Busca la palabra "TOTAL" cerca del final del documento, usualmente después de "SUBTOTAL" o "IVA". Devuelve el valor numérico que le corresponde. Este número puede tener una coma como separador decimal.
 
-                Devuelve un JSON con claves "numeroFactura", "nombreCliente", "cantidadArticulos", y "montoVenta". Usa null si un valor no se encuentra. Texto:
+                Devuelve un objeto JSON con las claves "numeroFactura", "nombreCliente", "cantidadArticulos", y "montoVenta". Si un valor no se puede encontrar, su valor debe ser null.
+
+                Texto de la factura:
                 --- ${text.substring(0, 8000)} ---
             `;
             
