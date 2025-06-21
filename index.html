@@ -219,7 +219,8 @@
             const cantidadArticulos = parseInt(cantidadArticulosInput.value, 10);
             if (isNaN(montoVenta) || montoVenta <= 0) { mostrarError('Ingresa un monto de venta válido.'); return; }
             if (isNaN(cantidadArticulos) || cantidadArticulos < 0) { mostrarError('Ingresa una cantidad de artículos válida.'); return; }
-            const comisionTotal = (montoVenta * 0.1734 * 0.007) + (cantidadArticulos * 20);
+            // --- CAMBIO EN LA FÓRMULA ---
+            const comisionTotal = (montoVenta * 0.8266 * 0.007) + (cantidadArticulos * 20);
             mostrarResultado(comisionTotal);
         }
         
