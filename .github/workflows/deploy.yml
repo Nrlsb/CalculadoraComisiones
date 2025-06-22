@@ -6,7 +6,7 @@ on:
     branches:
       - main # Cámbialo a "master" si tu rama principal se llama así
 
-# ¡NUEVO! Esta sección da los permisos necesarios
+# Da los permisos necesarios para que la acción pueda escribir en la rama gh-pages
 permissions:
   contents: write
 
@@ -18,11 +18,15 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v3
 
-      # 2. Crea el archivo firebase-config.js usando el secreto que guardaste
+      # 2. Crea el archivo firebase-config.js usando el secreto
       - name: Create Firebase Config File 🤫
         run: echo "${{ secrets.FIREBASE_CONFIG_JS }}" > firebase-config.js
         
-      # 3. Despliega la carpeta completa a GitHub Pages
+      # 3. (PASO DE DEPURACIÓN) Lista los archivos para verificar que el config se creó
+      - name: List files in the directory
+        run: ls -la
+
+      # 4. Despliega la carpeta completa a GitHub Pages
       - name: Deploy 🚀
         uses: peaceiris/actions-gh-pages@v3
         with:
