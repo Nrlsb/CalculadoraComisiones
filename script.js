@@ -53,6 +53,13 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const historyTable = document.querySelector('#history-container table');
 const emptyHistoryMsg = document.getElementById('empty-history');
 
+// Elementos del Modal de Confirmación
+const confirmationModal = document.getElementById('confirmation-modal');
+const modalDialog = document.getElementById('modal-dialog');
+const modalMessage = document.getElementById('modal-message');
+const modalCancelBtn = document.getElementById('modal-cancel-btn');
+const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+
 // --- Global State ---
 let apiKey = '';
 let currentUser = null;
@@ -83,8 +90,34 @@ const handleLogout = async () => {
     await signOut(auth);
 };
 
-// --- App Logic ---
+// --- Modal Logic ---
+function showConfirmationModal(message, onConfirmCallback) {
+    modalMessage.textContent = message;
 
+    // Asigna la función de confirmación al botón. Usamos .onclick para reemplazar cualquier listener anterior.
+    modalConfirmBtn.onclick = () => {
+        onConfirmCallback();
+        hideConfirmationModal();
+    };
+
+    // Muestra el modal con una animación
+    confirmationModal.classList.remove('hidden');
+    setTimeout(() => { // Pequeño delay para permitir que la transición CSS se aplique
+        confirmationModal.classList.remove('opacity-0');
+        modalDialog.classList.remove('scale-95');
+    }, 10);
+}
+
+function hideConfirmationModal() {
+    // Oculta el modal con una animación
+    confirmationModal.classList.add('opacity-0');
+    modalDialog.classList.add('scale-95');
+    setTimeout(() => { // Espera a que la animación termine para ocultarlo del DOM
+        confirmationModal.classList.add('hidden');
+    }, 300); // Este tiempo debe coincidir con la duración de la transición en CSS
+}
+
+// --- App Logic ---
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
 
 function formatCurrency(value) {
@@ -126,12 +159,14 @@ function renderHistory(commissionHistory) {
     });
     historyTotal.textContent = formatCurrency(total);
 
+    // Reemplaza la llamada a confirm() con el modal personalizado
     document.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const docId = e.target.dataset.id;
-            if (confirm('¿Estás seguro de que quieres eliminar esta comisión?')) {
-                deleteCommission(docId);
-            }
+            showConfirmationModal(
+                '¿Estás seguro de que quieres eliminar esta comisión?',
+                () => deleteCommission(docId) // Pasa la función a ejecutar si se confirma
+            );
         });
     });
 }
@@ -174,9 +209,9 @@ async function deleteCommission(docId) {
     }
 }
 
-async function clearAllHistory() {
-    if (!currentUser || !confirm('¿Estás seguro de que quieres borrar TODO tu historial? Esta acción no se puede deshacer.')) return;
-
+// Esta función ahora solo contiene la lógica de borrado. La confirmación se maneja antes.
+async function doClearAllHistory() {
+    if (!currentUser) return;
     try {
         const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
         const snapshot = await getDocs(userHistoryCollection);
@@ -412,7 +447,17 @@ function addEventListeners() {
     saveApiBtn.addEventListener('click', saveApiKey);
     fileUploadInput.addEventListener('change', handleFileUpload);
     calcularBtn.addEventListener('click', handleCalculate);
-    clearHistoryBtn.addEventListener('click', clearAllHistory);
+    
+    // El botón de borrar todo el historial ahora llama al modal
+    clearHistoryBtn.addEventListener('click', () => {
+        showConfirmationModal(
+            '¿Estás seguro de que quieres borrar TODO tu historial? Esta acción no se puede deshacer.',
+            doClearAllHistory 
+        );
+    });
+
+    // El botón de cancelar del modal simplemente lo cierra
+    modalCancelBtn.addEventListener('click', hideConfirmationModal);
 
     cantidadArticulosInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') calcularBtn.click();
