@@ -1,5 +1,3 @@
-console.log("Script v2.2 Cargado - Modal personalizado");
-
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import {
@@ -25,48 +23,82 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- DOM Element Selection ---
-// (Elementos existentes omitidos por brevedad)
+// --- DOM Element Selection (All elements must be declared) ---
 const authSection = document.getElementById('auth-section');
 const appContainer = document.getElementById('app-container');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
 const loginBtn = document.getElementById('loginBtn');
-// ... todos los demás elementos ...
+const signupBtn = document.getElementById('signupBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const authError = document.getElementById('auth-error');
+const userEmailSpan = document.getElementById('user-email');
+
+const montoVentaInput = document.getElementById('montoVenta');
+const cantidadArticulosInput = document.getElementById('cantidadArticulos');
+const numeroFacturaInput = document.getElementById('numeroFacturaInput');
+const clienteInput = document.getElementById('clienteInput');
+const calcularBtn = document.getElementById('calcularBtn');
+const resultadoDiv = document.getElementById('resultado');
+const fileUploadInput = document.getElementById('fileUpload');
+const fileUploadLabel = document.getElementById('fileUploadLabel');
+const fileStatus = document.getElementById('file-status');
+const settingsBtn = document.getElementById('settings-btn');
+const settingsPanel = document.getElementById('settings-panel');
+const apiKeyInput = document.getElementById('apiKey');
+const saveApiBtn = document.getElementById('saveApiBtn');
+const historyBody = document.getElementById('history-body');
+const historyTotal = document.getElementById('history-total');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const historyTable = document.querySelector('#history-container table');
 const emptyHistoryMsg = document.getElementById('empty-history');
 
-
-// === NUEVO: Elementos del Modal ===
+// Modal Elements
 const confirmationModal = document.getElementById('confirmation-modal');
 const modalDialog = document.getElementById('modal-dialog');
 const modalMessage = document.getElementById('modal-message');
 const modalCancelBtn = document.getElementById('modal-cancel-btn');
 const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 
-
 // --- Global State ---
 let apiKey = '';
 let currentUser = null;
 let unsubscribeHistory = null;
 
-// --- Funciones de Autenticación (sin cambios) ---
-const handleSignup = async () => { /* ... */ };
-const handleLogin = async () => { /* ... */ };
-const handleLogout = async () => { /* ... */ };
+// --- Auth Functions ---
+const handleSignup = async () => {
+    try {
+        authError.textContent = '';
+        await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    } catch (error) {
+        console.error("Signup error:", error);
+        authError.textContent = "Error al registrar: " + error.message;
+    }
+};
 
+const handleLogin = async () => {
+    try {
+        authError.textContent = '';
+        await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    } catch (error) {
+        console.error("Login error:", error);
+        authError.textContent = "Error al iniciar sesión: " + error.message;
+    }
+};
 
-// --- Lógica de la App ---
+const handleLogout = async () => {
+    await signOut(auth);
+};
 
-// === NUEVO: Funciones para manejar el Modal ===
+// --- Modal Functions ---
 function showConfirmationModal(message, onConfirm) {
     modalMessage.textContent = message;
     confirmationModal.classList.remove('hidden');
-    // Pequeño delay para que la transición CSS funcione al añadir las clases
     setTimeout(() => {
         confirmationModal.classList.remove('opacity-0');
         modalDialog.classList.remove('scale-95', 'opacity-0');
     }, 10);
 
-    // Usamos .onclick para reemplazar fácilmente el listener cada vez que se abre el modal
     modalConfirmBtn.onclick = () => {
         onConfirm();
         hideConfirmationModal();
@@ -80,15 +112,25 @@ function showConfirmationModal(message, onConfirm) {
 function hideConfirmationModal() {
     confirmationModal.classList.add('opacity-0');
     modalDialog.classList.add('scale-95', 'opacity-0');
-    // Esperamos a que termine la transición para ocultarlo completamente
     setTimeout(() => {
         confirmationModal.classList.add('hidden');
-    }, 300); // La duración debe coincidir con la transición CSS
+    }, 300);
 }
 
-// --- Funciones de Historial y Datos ---
 
-// MODIFICADO: ya no usa confirm()
+// --- App Logic ---
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+
+function formatCurrency(value) {
+    if (typeof value !== 'number') return '$0.00';
+    return value.toLocaleString('es-AR', {
+        style: 'currency',
+        currency: 'ARS'
+    });
+}
+
+// --- History & Data Functions ---
 function renderHistory(commissionHistory) {
     historyBody.innerHTML = '';
     const hasHistory = commissionHistory.length > 0;
@@ -103,14 +145,22 @@ function renderHistory(commissionHistory) {
     let total = 0;
     commissionHistory.forEach(item => {
         const row = document.createElement('tr');
-        // (código para crear la fila de la tabla sin cambios)
-        row.innerHTML = `...`; 
+        row.classList.add('fade-in');
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.numeroFactura || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.nombreCliente || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatCurrency(item.montoVenta)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.cantidadArticulos}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCurrency(item.comisionCalculada)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                <button data-id="${item.id}" class="text-red-600 hover:text-red-900 delete-btn">Eliminar</button>
+            </td>
+        `;
         historyBody.appendChild(row);
         total += item.comisionCalculada;
     });
     historyTotal.textContent = formatCurrency(total);
 
-    // MODIFICADO: los botones de eliminar ahora usan el modal
     document.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const docId = e.target.dataset.id;
@@ -119,6 +169,33 @@ function renderHistory(commissionHistory) {
                 () => deleteCommission(docId)
             );
         });
+    });
+}
+
+async function saveCommission(commissionData) {
+    if (!currentUser) return;
+    try {
+        const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
+        await addDoc(userHistoryCollection, commissionData);
+    } catch (error) {
+        console.error("Error saving commission: ", error);
+        showError("No se pudo guardar la comisión.");
+    }
+}
+
+function loadHistory() {
+    if (!currentUser) return;
+    if (unsubscribeHistory) unsubscribeHistory();
+
+    const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
+    const q = query(userHistoryCollection);
+
+    unsubscribeHistory = onSnapshot(q, (snapshot) => {
+        const commissionHistory = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        renderHistory(commissionHistory);
     });
 }
 
@@ -133,7 +210,6 @@ async function deleteCommission(docId) {
     }
 }
 
-// MODIFICADO: La lógica de confirmación se mueve al event listener
 async function doClearAllHistory() {
     if (!currentUser) return;
     try {
@@ -149,33 +225,257 @@ async function doClearAllHistory() {
     }
 }
 
-// --- El resto de las funciones (handleCalculate, IA, etc.) sin cambios ---
-// ... (código existente) ...
+async function handleCalculate() {
+    resultadoDiv.innerHTML = '';
+    const montoVenta = parseFloat(montoVentaInput.value);
+    const cantidadArticulos = parseInt(cantidadArticulosInput.value, 10);
+    const numeroFactura = numeroFacturaInput.value.trim();
+    const nombreCliente = clienteInput.value.trim();
 
+    if (isNaN(montoVenta) || montoVenta <= 0) {
+        showError('Ingresa un monto de venta válido.');
+        return;
+    }
+    if (isNaN(cantidadArticulos) || cantidadArticulos < 0) {
+        showError('Ingresa una cantidad de artículos válida.');
+        return;
+    }
 
-// --- Configuración de Event Listeners ---
+    const comisionTotal = (montoVenta * 0.8266 * 0.007) + (cantidadArticulos * 20);
+
+    const newCommission = {
+        numeroFactura,
+        nombreCliente,
+        montoVenta,
+        cantidadArticulos,
+        comisionCalculada: comisionTotal,
+        createdAt: new Date()
+    };
+
+    await saveCommission(newCommission);
+    showResult(comisionTotal);
+
+    montoVentaInput.value = '';
+    cantidadArticulosInput.value = '';
+    numeroFacturaInput.value = '';
+    clienteInput.value = '';
+    numeroFacturaInput.focus();
+}
+
+function showResult(comision) {
+    resultadoDiv.innerHTML = `<div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-4 rounded-lg fade-in"><p class="font-semibold">Última Comisión Calculada:</p><p class="text-3xl font-bold mt-1">${formatCurrency(comision)}</p></div>`;
+}
+
+function showError(message) {
+    resultadoDiv.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg fade-in"><p class="font-semibold">Error</p><p>${message}</p></div>`;
+}
+
+// --- Settings & API Key Functions ---
+function checkApiKey() {
+    apiKey = localStorage.getItem('googleApiKey');
+    const hasApiKey = !!apiKey;
+
+    fileUploadInput.disabled = !hasApiKey;
+    fileUploadLabel.classList.toggle('opacity-50', !hasApiKey);
+    fileUploadLabel.classList.toggle('cursor-not-allowed', !hasApiKey);
+    fileUploadLabel.classList.toggle('hover:bg-gray-900', hasApiKey);
+    fileStatus.textContent = hasApiKey 
+        ? 'IA lista para analizar archivos.' 
+        : 'Se necesita una API Key para usar la IA. Ve a ⚙️.';
+}
+
+function saveApiKey() {
+    const newApiKey = apiKeyInput.value.trim();
+    if (newApiKey) {
+        localStorage.setItem('googleApiKey', newApiKey);
+        fileStatus.textContent = '✅ Clave guardada. ¡IA activada!';
+    } else {
+        localStorage.removeItem('googleApiKey');
+        fileStatus.textContent = 'Clave eliminada. La IA está desactivada.';
+    }
+    checkApiKey();
+    settingsPanel.classList.add('hidden');
+}
+
+// --- AI & File Processing Functions ---
+async function extractTextFromPdf(file) {
+    const fileReader = new FileReader();
+    return new Promise((resolve, reject) => {
+        fileReader.onload = async function() {
+            const typedarray = new Uint8Array(this.result);
+            try {
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                if (pdf.numPages === 0) {
+                    return reject(new Error("El PDF no tiene páginas."));
+                }
+                const page = await pdf.getPage(1);
+                const textContent = await page.getTextContent();
+                resolve(textContent.items.map(item => item.str).join(' '));
+            } catch (error) {
+                reject(error);
+            }
+        };
+        fileReader.onerror = () => reject(new Error("Error al leer el archivo."));
+        fileReader.readAsArrayBuffer(file);
+    });
+}
+
+function processAIResponse(jsonResponse) {
+    if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
+    if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
+    fileStatus.textContent = '✅ ¡Información extraída con éxito!';
+}
+
+async function callGenerativeAI(payload) {
+    if (!apiKey) {
+        showError("No hay una API Key configurada para la IA.");
+        return;
+    }
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error(`Error en la API: ${response.status} ${response.statusText}`);
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+            const jsonResponse = JSON.parse(result.candidates[0].content.parts[0].text);
+            processAIResponse(jsonResponse);
+        } else {
+            throw new Error("La respuesta de la IA no tuvo el formato esperado.");
+        }
+    } catch (error) {
+        console.error("Error llamando a la IA:", error);
+        showError("La IA no pudo extraer los datos. Revisa tu API Key y el formato del archivo.");
+        fileStatus.textContent = "Error en el análisis.";
+    }
+}
+
+async function extractInfoFromText(text) {
+    const prompt = `Analiza el siguiente texto de una factura y extrae los campos 'cantidadArticulos' y 'montoVenta'. Devuelve un objeto JSON. 'cantidadArticulos' es la suma de la columna 'Cantidad'. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal. Texto a analizar: --- ${text.substring(0, 8000)} ---`;
+    const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    montoVenta: { type: "NUMBER" },
+                    cantidadArticulos: { type: "NUMBER" }
+                }
+            }
+        },
+    };
+    await callGenerativeAI(payload);
+}
+
+async function extractInfoFromImage(base64Data, mimeType) {
+    const prompt = `Analiza la siguiente imagen de una factura y extrae los campos 'cantidadArticulos' y 'montoVenta'. Devuelve un objeto JSON. 'cantidadArticulos' es la suma de la columna 'Cantidad'. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal.`;
+    const payload = {
+        contents: [{
+            parts: [
+                { text: prompt },
+                { inlineData: { mimeType: mimeType, data: base64Data } }
+            ]
+        }],
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    montoVenta: { type: "NUMBER" },
+                    cantidadArticulos: { type: "NUMBER" }
+                }
+            }
+        },
+    };
+    await callGenerativeAI(payload);
+}
+
+const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const fileType = file.type;
+    fileStatus.textContent = `📖 Leyendo ${file.name}...`;
+    resultadoDiv.innerHTML = '';
+
+    try {
+        if (fileType === 'application/pdf') {
+            const pdfText = await extractTextFromPdf(file);
+            fileStatus.textContent = '🧠 Analizando texto del PDF...';
+            await extractInfoFromText(pdfText);
+        } else if (fileType.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64Data = reader.result.split(',')[1];
+                fileStatus.textContent = '🧠 Analizando imagen...';
+                await extractInfoFromImage(base64Data, fileType);
+            };
+            reader.onerror = () => {
+                throw new Error("Error al leer el archivo de imagen.");
+            };
+            reader.readAsDataURL(file);
+        } else {
+            showError("Formato de archivo no soportado. Por favor, sube un PDF o una imagen.");
+            fileStatus.textContent = "Archivo no soportado.";
+        }
+    } catch (error) {
+        console.error('Error procesando el archivo:', error);
+        showError('No se pudo procesar el archivo.');
+        fileStatus.textContent = 'Error al procesar.';
+    } finally {
+        event.target.value = '';
+    }
+};
+
+// --- Event Listeners Setup ---
 function addEventListeners() {
-    console.log("Añadiendo event listeners...");
     loginBtn.addEventListener('click', handleLogin);
     signupBtn.addEventListener('click', handleSignup);
     logoutBtn.addEventListener('click', handleLogout);
     
-    // (otros listeners existentes sin cambios)
-    
-    // MODIFICADO: El botón de borrar historial ahora usa el modal
+    settingsBtn.addEventListener('click', () => {
+        settingsPanel.classList.toggle('hidden');
+        if (!settingsPanel.classList.contains('hidden')) {
+            apiKeyInput.value = localStorage.getItem('googleApiKey') || '';
+        }
+    });
+
+    saveApiBtn.addEventListener('click', saveApiKey);
+    fileUploadInput.addEventListener('change', handleFileUpload);
+    calcularBtn.addEventListener('click', handleCalculate);
     clearHistoryBtn.addEventListener('click', () => {
         showConfirmationModal(
             '¿Estás seguro de que quieres borrar TODO tu historial? Esta acción no se puede deshacer.',
-            doClearAllHistory // Llama a la función que ejecuta la acción
+            doClearAllHistory
         );
     });
 
-    console.log("Event listeners añadidos.");
+    cantidadArticulosInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') calcularBtn.click();
+    });
 }
 
-// --- Inicialización Principal (sin cambios) ---
-onAuthStateChanged(auth, (user) => { /* ... */ });
-document.addEventListener('DOMContentLoaded', addEventListeners);
+// --- Main Initialization ---
+onAuthStateChanged(auth, (user) => {
+    const isAuthenticated = !!user;
+    
+    authSection.classList.toggle('hidden', isAuthenticated);
+    appContainer.classList.toggle('hidden', !isAuthenticated);
 
-// NOTA: Se han omitido por brevedad las funciones que no cambiaron. 
-// Asegúrate de integrar estos cambios en tu archivo `script.js` completo.
+    if (user) {
+        currentUser = user;
+        userEmailSpan.textContent = user.email;
+        checkApiKey();
+        loadHistory();
+    } else {
+        currentUser = null;
+        if (unsubscribeHistory) unsubscribeHistory();
+        renderHistory([]);
+    }
+});
+
+document.addEventListener('DOMContentLoaded', addEventListeners);
