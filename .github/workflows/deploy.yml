@@ -6,6 +6,10 @@ on:
     branches:
       - main # Cámbialo a "master" si tu rama principal se llama así
 
+# ¡NUEVO! Esta sección da los permisos necesarios
+permissions:
+  contents: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -23,4 +27,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./ # Publica el directorio raíz actual
+          publish_dir: ./ 
