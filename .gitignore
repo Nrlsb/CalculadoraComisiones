@@ -1,0 +1,7 @@
+# Ignorar el archivo de configuración de Firebase
+firebase-config.js
+
+# También es buena práctica ignorar otras carpetas y archivos
+# como las dependencias de node (si las usas en el futuro)
+node_modules/
+.env

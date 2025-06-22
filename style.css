@@ -1,0 +1,35 @@
+/* Use the 'Inter' font loaded in the HTML */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Hide the default file input, as it's styled with a label */
+input[type="file"] {
+    display: none;
+}
+
+/* Simple fade-in animation for feedback messages */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Smooth transitions for panels that appear/disappear */
+#settings-panel, #auth-section, #app-container {
+    transition: all 0.5s ease-in-out;
+}
+
+/* Utility class to hide elements. Used by JavaScript to toggle visibility. */
+.hidden {
+    display: none;
+}
