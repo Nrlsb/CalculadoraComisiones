@@ -22,11 +22,15 @@ jobs:
       - name: Create Firebase Config File 🤫
         run: echo "${{ secrets.FIREBASE_CONFIG_JS }}" > firebase-config.js
         
-      # 3. (PASO DE DEPURACIÓN) Lista los archivos para verificar que el config se creó
-      - name: List files in the directory
+      # 3. (Opcional) Lista los archivos para verificar que el config se creó
+      - name: List files before deployment
         run: ls -la
 
-      # 4. Despliega la carpeta completa a GitHub Pages
+      # 4. ¡NUEVO PASO CRÍTICO! Elimina .gitignore para asegurar que todos los archivos se incluyan
+      - name: Remove .gitignore to prevent file exclusion
+        run: rm -f .gitignore
+
+      # 5. Despliega la carpeta completa a GitHub Pages
       - name: Deploy 🚀
         uses: peaceiris/actions-gh-pages@v3
         with:
