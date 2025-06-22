@@ -23,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- DOM Element Selection (All elements must be declared) ---
+// --- DOM Element Selection ---
 const authSection = document.getElementById('auth-section');
 const appContainer = document.getElementById('app-container');
 const emailInput = document.getElementById('email');
@@ -52,13 +52,6 @@ const historyTotal = document.getElementById('history-total');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const historyTable = document.querySelector('#history-container table');
 const emptyHistoryMsg = document.getElementById('empty-history');
-
-// Modal Elements
-const confirmationModal = document.getElementById('confirmation-modal');
-const modalDialog = document.getElementById('modal-dialog');
-const modalMessage = document.getElementById('modal-message');
-const modalCancelBtn = document.getElementById('modal-cancel-btn');
-const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 
 // --- Global State ---
 let apiKey = '';
@@ -89,34 +82,6 @@ const handleLogin = async () => {
 const handleLogout = async () => {
     await signOut(auth);
 };
-
-// --- Modal Functions ---
-function showConfirmationModal(message, onConfirm) {
-    modalMessage.textContent = message;
-    confirmationModal.classList.remove('hidden');
-    setTimeout(() => {
-        confirmationModal.classList.remove('opacity-0');
-        modalDialog.classList.remove('scale-95', 'opacity-0');
-    }, 10);
-
-    modalConfirmBtn.onclick = () => {
-        onConfirm();
-        hideConfirmationModal();
-    };
-
-    modalCancelBtn.onclick = () => {
-        hideConfirmationModal();
-    };
-}
-
-function hideConfirmationModal() {
-    confirmationModal.classList.add('opacity-0');
-    modalDialog.classList.add('scale-95', 'opacity-0');
-    setTimeout(() => {
-        confirmationModal.classList.add('hidden');
-    }, 300);
-}
-
 
 // --- App Logic ---
 
@@ -164,10 +129,9 @@ function renderHistory(commissionHistory) {
     document.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const docId = e.target.dataset.id;
-            showConfirmationModal(
-                '¿Estás seguro de que quieres eliminar esta comisión?',
-                () => deleteCommission(docId)
-            );
+            if (confirm('¿Estás seguro de que quieres eliminar esta comisión?')) {
+                deleteCommission(docId);
+            }
         });
     });
 }
@@ -210,8 +174,9 @@ async function deleteCommission(docId) {
     }
 }
 
-async function doClearAllHistory() {
-    if (!currentUser) return;
+async function clearAllHistory() {
+    if (!currentUser || !confirm('¿Estás seguro de que quieres borrar TODO tu historial? Esta acción no se puede deshacer.')) return;
+
     try {
         const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
         const snapshot = await getDocs(userHistoryCollection);
@@ -447,12 +412,7 @@ function addEventListeners() {
     saveApiBtn.addEventListener('click', saveApiKey);
     fileUploadInput.addEventListener('change', handleFileUpload);
     calcularBtn.addEventListener('click', handleCalculate);
-    clearHistoryBtn.addEventListener('click', () => {
-        showConfirmationModal(
-            '¿Estás seguro de que quieres borrar TODO tu historial? Esta acción no se puede deshacer.',
-            doClearAllHistory
-        );
-    });
+    clearHistoryBtn.addEventListener('click', clearAllHistory);
 
     cantidadArticulosInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') calcularBtn.click();
