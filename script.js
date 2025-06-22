@@ -18,21 +18,9 @@ import {
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- Firebase Configuration ---
-// IMPORTANT: Replace with your actual Firebase config object
-// For security, it's recommended to use environment variables or a backend to store these keys.
-// However, for client-side apps, ensure you have strong Firebase Security Rules.
-const firebaseConfig = {
-    apiKey: "AIzaSyBogsJTYqw8x8pV6DSVMTdROF-88hGZDGk",
-    authDomain: "calculadora-comisiones-29213.firebaseapp.com",
-    projectId: "calculadora-comisiones-29213",
-    storageBucket: "calculadora-comisiones-29213.firebasestorage.app",
-    messagingSenderId: "989161312785",
-    appId: "1:989161312785:web:1096db83de55a53eb797b0",
-    measurementId: "G-FVKKH6YB0W"
-};
-
-// --- Initialize Firebase ---
+// --- Firebase Initialization ---
+// The 'firebaseConfig' variable is now loaded from the 'firebase-config.js' file.
+// That file is NOT committed to git, keeping your keys safe.
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
