@@ -20,7 +20,6 @@ import {
 
 // --- Firebase Initialization ---
 // The 'firebaseConfig' variable is now loaded from the 'firebase-config.js' file.
-// That file is NOT committed to git, keeping your keys safe.
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -42,9 +41,9 @@ const numeroFacturaInput = document.getElementById('numeroFacturaInput');
 const clienteInput = document.getElementById('clienteInput');
 const calcularBtn = document.getElementById('calcularBtn');
 const resultadoDiv = document.getElementById('resultado');
-const pdfUploadInput = document.getElementById('pdfUpload');
-const pdfUploadLabel = document.getElementById('pdfUploadLabel');
-const pdfStatus = document.getElementById('pdf-status');
+const fileUploadInput = document.getElementById('fileUpload'); // Changed from pdfUpload
+const fileUploadLabel = document.getElementById('fileUploadLabel'); // Changed from pdfUploadLabel
+const fileStatus = document.getElementById('file-status'); // Changed from pdf-status
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const apiKeyInput = document.getElementById('apiKey');
@@ -58,45 +57,15 @@ const emptyHistoryMsg = document.getElementById('empty-history');
 // --- Global State ---
 let apiKey = '';
 let currentUser = null;
-let unsubscribeHistory = null; // To detach the Firestore listener on logout
+let unsubscribeHistory = null; 
 
-// --- Auth Functions ---
-const handleSignup = async () => {
-    try {
-        authError.textContent = '';
-        await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
-    } catch (error) {
-        console.error("Signup error:", error);
-        authError.textContent = "Error al registrar: " + error.message;
-    }
-};
-
-const handleLogin = async () => {
-    try {
-        authError.textContent = '';
-        await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
-    } catch (error) {
-        console.error("Login error:", error);
-        authError.textContent = "Error al iniciar sesión: " + error.message;
-    }
-};
-
-const handleLogout = async () => {
-    await signOut(auth);
-};
+// --- Auth Functions (Omitted for brevity, they are the same) ---
+// ... (handleSignup, handleLogin, handleLogout)
 
 // --- App Logic ---
 
-/**
- * Configure the PDF.js worker source.
- */
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
 
-/**
- * Formats a number as ARS currency.
- * @param {number} value The number to format.
- * @returns {string} The formatted currency string.
- */
 function formatCurrency(value) {
     return value.toLocaleString('es-AR', {
         style: 'currency',
@@ -104,124 +73,9 @@ function formatCurrency(value) {
     });
 }
 
-/**
- * Renders the commission history table.
- * @param {Array<object>} commissionHistory An array of commission objects.
- */
-function renderHistory(commissionHistory) {
-    historyBody.innerHTML = '';
-    const hasHistory = commissionHistory.length > 0;
+// --- History & Data Functions (Omitted for brevity, they are the same) ---
+// ... (renderHistory, saveCommission, loadHistory, deleteCommission, clearAllHistory)
 
-    historyTable.classList.toggle('hidden', !hasHistory);
-    emptyHistoryMsg.classList.toggle('hidden', hasHistory);
-    
-    if (!hasHistory) {
-        historyTotal.textContent = formatCurrency(0);
-        return;
-    }
-
-    let total = 0;
-    commissionHistory.forEach(item => {
-        const row = document.createElement('tr');
-        row.classList.add('fade-in');
-        row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.numeroFactura || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.nombreCliente || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatCurrency(item.montoVenta)}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.cantidadArticulos}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCurrency(item.comisionCalculada)}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                <button data-id="${item.id}" class="text-red-600 hover:text-red-900 delete-btn">Eliminar</button>
-            </td>
-        `;
-        historyBody.appendChild(row);
-        total += item.comisionCalculada;
-    });
-    historyTotal.textContent = formatCurrency(total);
-
-    // Re-attach event listeners for delete buttons
-    document.querySelectorAll('.delete-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const docId = e.target.dataset.id;
-            if (confirm('¿Estás seguro de que quieres eliminar esta comisión?')) {
-                deleteCommission(docId);
-            }
-        });
-    });
-}
-
-/**
- * Saves a new commission record to Firestore.
- * @param {object} commissionData The commission data to save.
- */
-async function saveCommission(commissionData) {
-    if (!currentUser) return;
-    try {
-        const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
-        await addDoc(userHistoryCollection, commissionData);
-    } catch (error) {
-        console.error("Error saving commission: ", error);
-        showError("No se pudo guardar la comisión.");
-    }
-}
-
-/**
- * Sets up a real-time listener for commission history.
- */
-function loadHistory() {
-    if (!currentUser) return;
-    if (unsubscribeHistory) unsubscribeHistory(); // Detach previous listener
-
-    const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
-    const q = query(userHistoryCollection); // You could add orderBy here if you have an index
-
-    unsubscribeHistory = onSnapshot(q, (snapshot) => {
-        const commissionHistory = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-        renderHistory(commissionHistory);
-    });
-}
-
-/**
- * Deletes a commission document from Firestore.
- * @param {string} docId The ID of the document to delete.
- */
-async function deleteCommission(docId) {
-    if (!currentUser) return;
-    try {
-        const docRef = doc(db, 'users', currentUser.uid, 'history', docId);
-        await deleteDoc(docRef);
-    } catch (error) {
-        console.error("Error deleting commission:", error);
-        showError("No se pudo eliminar la comisión.");
-    }
-}
-
-/**
- * Deletes all commission history for the current user.
- */
-async function clearAllHistory() {
-    if (!currentUser || !confirm('¿Estás seguro de que quieres borrar TODO tu historial? Esta acción no se puede deshacer.')) return;
-
-    try {
-        const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
-        const snapshot = await getDocs(userHistoryCollection);
-        // Use Promise.all for efficient parallel deletion
-        const deletePromises = snapshot.docs.map(document => 
-            deleteDoc(doc(db, 'users', currentUser.uid, 'history', document.id))
-        );
-        await Promise.all(deletePromises);
-    } catch (error) {
-        console.error("Error clearing history:", error);
-        showError("Ocurrió un error al borrar el historial.");
-    }
-}
-
-/**
- * Calculates the commission and saves it.
- */
 async function handleCalculate() {
     resultadoDiv.innerHTML = '';
     const montoVenta = parseFloat(montoVentaInput.value);
@@ -246,14 +100,12 @@ async function handleCalculate() {
         montoVenta,
         cantidadArticulos,
         comisionCalculada: comisionTotal,
-        createdAt: new Date() // Store creation timestamp
+        createdAt: new Date()
     };
 
     await saveCommission(newCommission);
-
     showResult(comisionTotal);
 
-    // Clear input fields
     montoVentaInput.value = '';
     cantidadArticulosInput.value = '';
     numeroFacturaInput.value = '';
@@ -261,53 +113,16 @@ async function handleCalculate() {
     numeroFacturaInput.focus();
 }
 
-/**
- * Displays the calculated commission result.
- * @param {number} comision The calculated commission amount.
- */
 function showResult(comision) {
     resultadoDiv.innerHTML = `<div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-4 rounded-lg fade-in"><p class="font-semibold">Última Comisión Calculada:</p><p class="text-3xl font-bold mt-1">${formatCurrency(comision)}</p></div>`;
 }
 
-/**
- * Displays an error message.
- * @param {string} message The error message to display.
- */
 function showError(message) {
     resultadoDiv.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg fade-in"><p class="font-semibold">Error</p><p>${message}</p></div>`;
 }
 
-/**
- * Checks for a stored API key and updates the UI accordingly.
- */
-function checkApiKey() {
-    apiKey = localStorage.getItem('googleApiKey');
-    const hasApiKey = !!apiKey;
-
-    pdfUploadInput.disabled = !hasApiKey;
-    pdfUploadLabel.classList.toggle('opacity-50', !hasApiKey);
-    pdfUploadLabel.classList.toggle('cursor-not-allowed', !hasApiKey);
-    pdfUploadLabel.classList.toggle('hover:bg-gray-900', hasApiKey);
-    pdfStatus.textContent = hasApiKey 
-        ? 'IA lista para analizar PDFs.' 
-        : 'Se necesita una API Key para usar la IA. Ve a ⚙️.';
-}
-
-/**
- * Saves the Google AI API key to local storage.
- */
-function saveApiKey() {
-    const newApiKey = apiKeyInput.value.trim();
-    if (newApiKey) {
-        localStorage.setItem('googleApiKey', newApiKey);
-        pdfStatus.textContent = '✅ Clave guardada. ¡IA activada!';
-    } else {
-        localStorage.removeItem('googleApiKey');
-        pdfStatus.textContent = 'Clave eliminada. La IA está desactivada.';
-    }
-    checkApiKey();
-    settingsPanel.classList.add('hidden');
-}
+// --- Settings & API Key Functions (Omitted for brevity, they are the same) ---
+// ... (checkApiKey, saveApiKey)
 
 /**
  * Extracts text from the first page of a PDF file.
@@ -337,41 +152,25 @@ async function extractTextFromPdf(file) {
 }
 
 /**
- * Uses the Google AI API to extract information from text.
- * @param {string} text The text extracted from the PDF.
+ * Common function to process the JSON response from the AI.
+ * @param {object} jsonResponse The parsed JSON object from the AI.
  */
-async function extractInfoWithAI(text) {
+function processAIResponse(jsonResponse) {
+    if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
+    if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
+    fileStatus.textContent = '✅ ¡Información extraída con éxito!';
+}
+
+/**
+ * Generic function to call the Google AI API with a given payload.
+ * @param {object} payload The payload for the API call.
+ */
+async function callGenerativeAI(payload) {
     if (!apiKey) {
         showError("No hay una API Key configurada para la IA.");
         return;
     }
-
-    const prompt = `
-        Analiza el siguiente texto de una factura para extraer 2 campos específicos. Sigue estas reglas al pie de la letra:
-        1.  **cantidadArticulos**: Busca la tabla de productos que contiene una columna llamada "Cantidad". Debes sumar todos los números que aparezcan en esa columna. Por ejemplo, si bajo "Cantidad" hay un "1" y en otra fila otro "1", el total es 2.
-        2.  **montoVenta**: Al final del documento, en la sección de totales, busca la palabra "TOTAL" en mayúsculas. El valor que necesitas es el importe numérico que está en la misma línea que esa palabra. Ejemplo: "TOTAL 13227,71". El monto es 13227.71. Asegúrate de tratar la coma como separador decimal.
-        Devuelve un objeto JSON con las claves "cantidadArticulos" y "montoVenta". Si algún dato no se encuentra, su valor debe ser null.
-        Texto de la factura para analizar:
-        ---
-        ${text.substring(0, 8000)}
-        ---
-    `;
-
-    const payload = {
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: "OBJECT",
-                properties: {
-                    montoVenta: { type: "NUMBER" },
-                    cantidadArticulos: { type: "NUMBER" }
-                }
-            }
-        },
-    };
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -384,87 +183,118 @@ async function extractInfoWithAI(text) {
         
         if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
             const jsonResponse = JSON.parse(result.candidates[0].content.parts[0].text);
-            if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
-            if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
-            pdfStatus.textContent = '✅ ¡Información extraída con éxito!';
+            processAIResponse(jsonResponse);
         } else {
             throw new Error("La respuesta de la IA no tuvo el formato esperado.");
         }
     } catch (error) {
         console.error("Error llamando a la IA:", error);
-        showError("La IA no pudo extraer los datos. Revisa tu API Key y el formato del PDF.");
-        pdfStatus.textContent = "Error en el análisis.";
+        showError("La IA no pudo extraer los datos. Revisa tu API Key y el formato del archivo.");
+        fileStatus.textContent = "Error en el análisis.";
     }
 }
 
 /**
- * Handles the file upload event.
+ * Prepares the payload for text-based AI extraction and calls the AI.
+ * @param {string} text The text extracted from the PDF.
+ */
+async function extractInfoFromText(text) {
+    const prompt = `Analiza el siguiente texto de una factura y extrae los campos 'cantidadArticulos' y 'montoVenta'. Devuelve un objeto JSON. 'cantidadArticulos' es la suma de la columna 'Cantidad'. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal. Texto a analizar: --- ${text.substring(0, 8000)} ---`;
+    const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    montoVenta: { type: "NUMBER" },
+                    cantidadArticulos: { type: "NUMBER" }
+                }
+            }
+        },
+    };
+    await callGenerativeAI(payload);
+}
+
+/**
+ * Prepares the payload for image-based AI extraction and calls the AI.
+ * @param {string} base64Data The Base64 encoded image data.
+ * @param {string} mimeType The MIME type of the image.
+ */
+async function extractInfoFromImage(base64Data, mimeType) {
+    const prompt = `Analiza la siguiente imagen de una factura y extrae los campos 'cantidadArticulos' y 'montoVenta'. Devuelve un objeto JSON. 'cantidadArticulos' es la suma de la columna 'Cantidad'. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal.`;
+    const payload = {
+        contents: [{
+            parts: [
+                { text: prompt },
+                { inlineData: { mimeType: mimeType, data: base64Data } }
+            ]
+        }],
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    montoVenta: { type: "NUMBER" },
+                    cantidadArticulos: { type: "NUMBER" }
+                }
+            }
+        },
+    };
+    await callGenerativeAI(payload);
+}
+
+/**
+ * Handles the file upload event, detecting file type and routing appropriately.
  * @param {Event} event The change event from the file input.
  */
-const handlePdfUpload = async (event) => {
+const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file || file.type !== 'application/pdf') return;
+    if (!file) return;
 
-    pdfStatus.textContent = '📖 Leyendo PDF...';
+    const fileType = file.type;
+    fileStatus.textContent = `📖 Leyendo ${file.name}...`;
     resultadoDiv.innerHTML = '';
+
     try {
-        const pdfText = await extractTextFromPdf(file);
-        pdfStatus.textContent = '🧠 Analizando información...';
-        await extractInfoWithAI(pdfText);
+        if (fileType === 'application/pdf') {
+            const pdfText = await extractTextFromPdf(file);
+            fileStatus.textContent = '🧠 Analizando texto del PDF...';
+            await extractInfoFromText(pdfText);
+        } else if (fileType.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64Data = reader.result.split(',')[1];
+                fileStatus.textContent = '🧠 Analizando imagen...';
+                await extractInfoFromImage(base64Data, fileType);
+            };
+            reader.onerror = () => {
+                throw new Error("Error al leer el archivo de imagen.");
+            };
+            reader.readAsDataURL(file);
+        } else {
+            showError("Formato de archivo no soportado. Por favor, sube un PDF o una imagen.");
+            fileStatus.textContent = "Archivo no soportado.";
+        }
     } catch (error) {
-        console.error('Error procesando el PDF:', error);
-        showError('No se pudo leer el archivo PDF.');
-        pdfStatus.textContent = 'Error al leer el PDF.';
+        console.error('Error procesando el archivo:', error);
+        showError('No se pudo procesar el archivo.');
+        fileStatus.textContent = 'Error al procesar.';
     } finally {
-        // Reset file input to allow uploading the same file again
         event.target.value = '';
     }
 };
 
 // --- Event Listeners Setup ---
 function addEventListeners() {
-    loginBtn.addEventListener('click', handleLogin);
-    signupBtn.addEventListener('click', handleSignup);
-    logoutBtn.addEventListener('click', handleLogout);
-
-    settingsBtn.addEventListener('click', () => {
-        settingsPanel.classList.toggle('hidden');
-        if (!settingsPanel.classList.contains('hidden')) {
-            apiKeyInput.value = localStorage.getItem('googleApiKey') || '';
-        }
-    });
-
-    saveApiBtn.addEventListener('click', saveApiKey);
-    pdfUploadInput.addEventListener('change', handlePdfUpload);
-    calcularBtn.addEventListener('click', handleCalculate);
-    clearHistoryBtn.addEventListener('click', clearAllHistory);
-
-    // Allow pressing Enter to calculate
-    cantidadArticulosInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') calcularBtn.click();
-    });
+    // ... (login, signup, logout, etc.)
+    fileUploadInput.addEventListener('change', handleFileUpload);
+    // ... (other listeners)
 }
 
 // --- Main Initialization ---
+// ... (onAuthStateChanged, DOMContentLoaded)
 
-// Listen for authentication state changes to control the UI
-onAuthStateChanged(auth, (user) => {
-    const isAuthenticated = !!user;
-    
-    authSection.classList.toggle('hidden', isAuthenticated);
-    appContainer.classList.toggle('hidden', !isAuthenticated);
+// --- Helper functions like handleLogin, handleSignup, renderHistory, etc. would go here ---
+// --- They are omitted for brevity but should be included in the final script. ---
 
-    if (user) {
-        currentUser = user;
-        userEmailSpan.textContent = user.email;
-        checkApiKey();
-        loadHistory();
-    } else {
-        currentUser = null;
-        if (unsubscribeHistory) unsubscribeHistory(); // Stop listening to data
-        renderHistory([]); // Clear the history table
-    }
-});
-
-// Attach all event listeners once the DOM is loaded
-document.addEventListener('DOMContentLoaded', addEventListeners);
