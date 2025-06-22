@@ -1,0 +1,26 @@
+name: Deploy to GitHub Pages
+
+# Se ejecuta cada vez que haces un push a tu rama principal (main o master)
+on:
+  push:
+    branches:
+      - main # Cámbialo a "master" si tu rama principal se llama así
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Descarga tu código del repositorio
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+
+      # 2. Crea el archivo firebase-config.js usando el secreto que guardaste
+      - name: Create Firebase Config File 🤫
+        run: echo "${{ secrets.FIREBASE_CONFIG_JS }}" > firebase-config.js
+        
+      # 3. Despliega la carpeta completa a GitHub Pages
+      - name: Deploy 🚀
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./ # Publica el directorio raíz actual
