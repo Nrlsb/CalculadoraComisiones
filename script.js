@@ -41,9 +41,9 @@ const numeroFacturaInput = document.getElementById('numeroFacturaInput');
 const clienteInput = document.getElementById('clienteInput');
 const calcularBtn = document.getElementById('calcularBtn');
 const resultadoDiv = document.getElementById('resultado');
-const fileUploadInput = document.getElementById('fileUpload'); // Changed from pdfUpload
-const fileUploadLabel = document.getElementById('fileUploadLabel'); // Changed from pdfUploadLabel
-const fileStatus = document.getElementById('file-status'); // Changed from pdf-status
+const fileUploadInput = document.getElementById('fileUpload');
+const fileUploadLabel = document.getElementById('fileUploadLabel');
+const fileStatus = document.getElementById('file-status');
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const apiKeyInput = document.getElementById('apiKey');
@@ -57,10 +57,33 @@ const emptyHistoryMsg = document.getElementById('empty-history');
 // --- Global State ---
 let apiKey = '';
 let currentUser = null;
-let unsubscribeHistory = null; 
+let unsubscribeHistory = null;
 
-// --- Auth Functions (Omitted for brevity, they are the same) ---
-// ... (handleSignup, handleLogin, handleLogout)
+// --- Auth Functions ---
+const handleSignup = async () => {
+    try {
+        authError.textContent = '';
+        await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    } catch (error) {
+        console.error("Signup error:", error);
+        authError.textContent = "Error al registrar: " + error.message;
+    }
+};
+
+const handleLogin = async () => {
+    try {
+        authError.textContent = '';
+        await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    } catch (error) {
+        console.error("Login error:", error);
+        authError.textContent = "Error al iniciar sesión: " + error.message;
+    }
+};
+
+const handleLogout = async () => {
+    await signOut(auth);
+};
+
 
 // --- App Logic ---
 
@@ -73,8 +96,102 @@ function formatCurrency(value) {
     });
 }
 
-// --- History & Data Functions (Omitted for brevity, they are the same) ---
-// ... (renderHistory, saveCommission, loadHistory, deleteCommission, clearAllHistory)
+// --- History & Data Functions ---
+function renderHistory(commissionHistory) {
+    historyBody.innerHTML = '';
+    const hasHistory = commissionHistory.length > 0;
+
+    historyTable.classList.toggle('hidden', !hasHistory);
+    emptyHistoryMsg.classList.toggle('hidden', hasHistory);
+    
+    if (!hasHistory) {
+        historyTotal.textContent = formatCurrency(0);
+        return;
+    }
+
+    let total = 0;
+    commissionHistory.forEach(item => {
+        const row = document.createElement('tr');
+        row.classList.add('fade-in');
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.numeroFactura || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.nombreCliente || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatCurrency(item.montoVenta)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.cantidadArticulos}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCurrency(item.comisionCalculada)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                <button data-id="${item.id}" class="text-red-600 hover:text-red-900 delete-btn">Eliminar</button>
+            </td>
+        `;
+        historyBody.appendChild(row);
+        total += item.comisionCalculada;
+    });
+    historyTotal.textContent = formatCurrency(total);
+
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const docId = e.target.dataset.id;
+            if (confirm('¿Estás seguro de que quieres eliminar esta comisión?')) {
+                deleteCommission(docId);
+            }
+        });
+    });
+}
+
+async function saveCommission(commissionData) {
+    if (!currentUser) return;
+    try {
+        const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
+        await addDoc(userHistoryCollection, commissionData);
+    } catch (error) {
+        console.error("Error saving commission: ", error);
+        showError("No se pudo guardar la comisión.");
+    }
+}
+
+function loadHistory() {
+    if (!currentUser) return;
+    if (unsubscribeHistory) unsubscribeHistory();
+
+    const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
+    const q = query(userHistoryCollection);
+
+    unsubscribeHistory = onSnapshot(q, (snapshot) => {
+        const commissionHistory = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        renderHistory(commissionHistory);
+    });
+}
+
+async function deleteCommission(docId) {
+    if (!currentUser) return;
+    try {
+        const docRef = doc(db, 'users', currentUser.uid, 'history', docId);
+        await deleteDoc(docRef);
+    } catch (error) {
+        console.error("Error deleting commission:", error);
+        showError("No se pudo eliminar la comisión.");
+    }
+}
+
+async function clearAllHistory() {
+    if (!currentUser || !confirm('¿Estás seguro de que quieres borrar TODO tu historial? Esta acción no se puede deshacer.')) return;
+
+    try {
+        const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
+        const snapshot = await getDocs(userHistoryCollection);
+        const deletePromises = snapshot.docs.map(document => 
+            deleteDoc(doc(db, 'users', currentUser.uid, 'history', document.id))
+        );
+        await Promise.all(deletePromises);
+    } catch (error) {
+        console.error("Error clearing history:", error);
+        showError("Ocurrió un error al borrar el historial.");
+    }
+}
+
 
 async function handleCalculate() {
     resultadoDiv.innerHTML = '';
@@ -121,8 +238,33 @@ function showError(message) {
     resultadoDiv.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg fade-in"><p class="font-semibold">Error</p><p>${message}</p></div>`;
 }
 
-// --- Settings & API Key Functions (Omitted for brevity, they are the same) ---
-// ... (checkApiKey, saveApiKey)
+// --- Settings & API Key Functions ---
+function checkApiKey() {
+    apiKey = localStorage.getItem('googleApiKey');
+    const hasApiKey = !!apiKey;
+
+    fileUploadInput.disabled = !hasApiKey;
+    fileUploadLabel.classList.toggle('opacity-50', !hasApiKey);
+    fileUploadLabel.classList.toggle('cursor-not-allowed', !hasApiKey);
+    fileUploadLabel.classList.toggle('hover:bg-gray-900', hasApiKey);
+    fileStatus.textContent = hasApiKey 
+        ? 'IA lista para analizar archivos.' 
+        : 'Se necesita una API Key para usar la IA. Ve a ⚙️.';
+}
+
+function saveApiKey() {
+    const newApiKey = apiKeyInput.value.trim();
+    if (newApiKey) {
+        localStorage.setItem('googleApiKey', newApiKey);
+        fileStatus.textContent = '✅ Clave guardada. ¡IA activada!';
+    } else {
+        localStorage.removeItem('googleApiKey');
+        fileStatus.textContent = 'Clave eliminada. La IA está desactivada.';
+    }
+    checkApiKey();
+    settingsPanel.classList.add('hidden');
+}
+
 
 /**
  * Extracts text from the first page of a PDF file.
@@ -287,14 +429,44 @@ const handleFileUpload = async (event) => {
 
 // --- Event Listeners Setup ---
 function addEventListeners() {
-    // ... (login, signup, logout, etc.)
+    loginBtn.addEventListener('click', handleLogin);
+    signupBtn.addEventListener('click', handleSignup);
+    logoutBtn.addEventListener('click', handleLogout);
+    
+    settingsBtn.addEventListener('click', () => {
+        settingsPanel.classList.toggle('hidden');
+        if (!settingsPanel.classList.contains('hidden')) {
+            apiKeyInput.value = localStorage.getItem('googleApiKey') || '';
+        }
+    });
+
+    saveApiBtn.addEventListener('click', saveApiKey);
     fileUploadInput.addEventListener('change', handleFileUpload);
-    // ... (other listeners)
+    calcularBtn.addEventListener('click', handleCalculate);
+    clearHistoryBtn.addEventListener('click', clearAllHistory);
+
+    cantidadArticulosInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') calcularBtn.click();
+    });
 }
 
 // --- Main Initialization ---
-// ... (onAuthStateChanged, DOMContentLoaded)
+onAuthStateChanged(auth, (user) => {
+    const isAuthenticated = !!user;
+    
+    authSection.classList.toggle('hidden', isAuthenticated);
+    appContainer.classList.toggle('hidden', !isAuthenticated);
 
-// --- Helper functions like handleLogin, handleSignup, renderHistory, etc. would go here ---
-// --- They are omitted for brevity but should be included in the final script. ---
+    if (user) {
+        currentUser = user;
+        userEmailSpan.textContent = user.email;
+        checkApiKey();
+        loadHistory();
+    } else {
+        currentUser = null;
+        if (unsubscribeHistory) unsubscribeHistory();
+        renderHistory([]);
+    }
+});
 
+document.addEventListener('DOMContentLoaded', addEventListeners);
