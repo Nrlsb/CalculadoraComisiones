@@ -1,38 +1,58 @@
+# Nombre del flujo de trabajo
 name: Deploy to GitHub Pages
 
-# Se ejecuta cada vez que haces un push a tu rama principal (main o master)
+# Se ejecuta cada vez que haces un push a la rama 'main'
 on:
   push:
-    branches:
-      - main # Cámbialo a "master" si tu rama principal se llama así
+    branches: ["main"]
 
-# Da los permisos necesarios para que la acción pueda escribir en la rama gh-pages
+# Permisos necesarios para que la acción pueda desplegar a GitHub Pages
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+# Define un control de concurrencia para evitar despliegues simultáneos
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  # Trabajo de construcción: prepara los archivos del sitio
+  build:
     runs-on: ubuntu-latest
     steps:
-      # 1. Descarga tu código del repositorio
-      - name: Checkout 🛎️
-        uses: actions/checkout@v3
+      # 1. Descarga el código de tu repositorio
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # 2. Crea el archivo firebase-config.js usando el secreto
-      - name: Create Firebase Config File 🤫
-        run: echo "${{ secrets.FIREBASE_CONFIG_JS }}" > firebase-config.js
-        
-      # 3. (Opcional) Lista los archivos para verificar que el config se creó
-      - name: List files before deployment
-        run: ls -la
+      # 2. Crea el archivo firebase-config.js a partir del secreto
+      - name: Create Firebase Config File
+        env:
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG_JS }}
+        run: echo "$FIREBASE_CONFIG" > firebase-config.js
 
-      # 4. ¡NUEVO PASO CRÍTICO! Elimina .gitignore para asegurar que todos los archivos se incluyan
-      - name: Remove .gitignore to prevent file exclusion
-        run: rm -f .gitignore
+      # 3. Configura GitHub Pages para el despliegue
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
-      # 5. Despliega la carpeta completa a GitHub Pages
-      - name: Deploy 🚀
-        uses: peaceiris/actions-gh-pages@v3
+      # 4. Sube los archivos del sitio como un "artefacto" para el trabajo de despliegue
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./ 
+          # Sube el directorio raíz completo
+          path: '.'
+
+  # Trabajo de despliegue: toma el artefacto y lo publica
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    # Este trabajo necesita que el trabajo 'build' termine primero
+    needs: build
+    steps:
+      # 1. Despliega el artefacto a GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
