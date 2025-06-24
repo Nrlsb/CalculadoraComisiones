@@ -367,7 +367,29 @@ async function extractInfoFromText(text) {
 }
 
 async function extractInfoFromImage(base64Data, mimeType) {
-    const prompt = `Analiza la siguiente imagen de una factura y extrae los campos 'cantidadArticulos' y 'montoVenta'. Devuelve un objeto JSON. 'cantidadArticulos' es la suma de la columna 'Cantidad'. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal.`;
+    // --- UPDATED PROMPT ---
+    const prompt = `
+    Analiza la imagen del documento (factura, remito, etc.) y extrae 'cantidadArticulos' y 'montoVenta' en formato JSON.
+    Considera estos posibles formatos y busca las palabras clave:
+
+    FORMATO 1 (Factura Tradicional Simple):
+    - Para 'cantidadArticulos', busca una columna con el encabezado "Cantidad". Suma los valores de esa columna.
+    - Para 'montoVenta', busca la palabra "TOTAL" y extrae el valor numérico asociado.
+
+    FORMATO 2 (Remito o Nota de Entrega):
+    - Para 'cantidadArticulos', busca una columna con encabezados como "Unidades", "Bultos", o "Cant.". Suma los valores.
+    - Para 'montoVenta', que puede no ser un total final, busca palabras como "Subtotal", "Valor Declarado" o el importe más alto en una lista de precios.
+
+    FORMATO 3 (Factura de Sistema tipo "TOTVS"):
+    - Para 'cantidadArticulos', busca una columna de números sin encabezado explícito, ubicada entre la descripción del producto y el precio unitario. Suma los valores de esa columna.
+    - Para 'montoVenta', busca la palabra "Total:" (con dos puntos) en el resumen de la derecha y extrae el valor numérico. También puede estar abajo con la etiqueta "Cta. Cte.". Prioriza el valor junto a "Total:".
+
+    REGLAS GENERALES:
+    - Siempre trata la coma (,) como separador decimal y el punto (.) como separador de miles.
+    - Si no encuentras un valor, devuélvelo como 'null'.
+    - Devuelve únicamente el objeto JSON como respuesta.
+    `;
+    
     const payload = {
         contents: [{
             parts: [
