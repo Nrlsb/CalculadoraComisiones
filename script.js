@@ -15,9 +15,7 @@ import {
     deleteDoc,
     doc,
     query,
-    onSnapshot,
-    setDoc,
-    getDoc
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Firebase Initialization ---
@@ -37,6 +35,7 @@ const authError = document.getElementById('auth-error');
 const userEmailSpan = document.getElementById('user-email');
 
 const montoVentaInput = document.getElementById('montoVenta');
+const cantidadArticulosInput = document.getElementById('cantidadArticulos');
 const numeroFacturaInput = document.getElementById('numeroFacturaInput');
 const clienteInput = document.getElementById('clienteInput');
 const calcularBtn = document.getElementById('calcularBtn');
@@ -54,11 +53,7 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const historyTable = document.querySelector('#history-container table');
 const emptyHistoryMsg = document.getElementById('empty-history');
 
-// New elements for Remuneracion Total
-const remuneracionTotalInput = document.getElementById('remuneracionTotalInput');
-const saveRemuneracionBtn = document.getElementById('saveRemuneracionBtn');
-
-// Confirmation Modal Elements
+// Elementos del Modal de Confirmación
 const confirmationModal = document.getElementById('confirmation-modal');
 const modalDialog = document.getElementById('modal-dialog');
 const modalMessage = document.getElementById('modal-message');
@@ -69,7 +64,6 @@ const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 let apiKey = '';
 let currentUser = null;
 let unsubscribeHistory = null;
-let currentUserSettings = { remuneracionTotal: 0 }; // Default settings
 
 // --- Auth Functions ---
 const handleSignup = async () => {
@@ -129,42 +123,6 @@ function formatCurrency(value) {
     });
 }
 
-// --- User Settings ---
-async function saveUserSettings() {
-    if (!currentUser) return;
-    const newRemuneracion = parseFloat(remuneracionTotalInput.value);
-    if (isNaN(newRemuneracion) || newRemuneracion < 0) {
-        showError("Por favor, ingresa un valor de remuneración válido.");
-        return;
-    }
-    
-    try {
-        const settingsRef = doc(db, 'userSettings', currentUser.uid);
-        await setDoc(settingsRef, { remuneracionTotal: newRemuneracion }, { merge: true });
-        currentUserSettings.remuneracionTotal = newRemuneracion;
-        alert('¡Remuneración guardada con éxito!'); // Simple feedback
-        settingsPanel.classList.add('hidden');
-    } catch (error) {
-        console.error("Error saving settings:", error);
-        showError("No se pudo guardar la configuración.");
-    }
-}
-
-async function loadUserSettings() {
-    if (!currentUser) return;
-    const settingsRef = doc(db, 'userSettings', currentUser.uid);
-    const docSnap = await getDoc(settingsRef);
-
-    if (docSnap.exists()) {
-        currentUserSettings = docSnap.data();
-    } else {
-        // Use default if no settings found
-        currentUserSettings = { remuneracionTotal: 0 };
-    }
-    remuneracionTotalInput.value = currentUserSettings.remuneracionTotal || 0;
-}
-
-
 // --- History & Data Functions ---
 function renderHistory(commissionHistory) {
     historyBody.innerHTML = '';
@@ -185,7 +143,7 @@ function renderHistory(commissionHistory) {
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.numeroFactura || '-'}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.nombreCliente || '-'}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatCurrency(item.montoVenta)}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatCurrency(item.remuneracionTotal)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.cantidadArticulos}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCurrency(item.comisionCalculada)}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                 <button data-id="${item.id}" class="text-red-600 hover:text-red-900 delete-btn">Eliminar</button>
@@ -263,30 +221,28 @@ async function doClearAllHistory() {
 async function handleCalculate() {
     resultadoDiv.innerHTML = '';
     const montoVenta = parseFloat(montoVentaInput.value);
+    const cantidadArticulos = parseInt(cantidadArticulosInput.value, 10);
     const numeroFactura = numeroFacturaInput.value.trim();
     const nombreCliente = clienteInput.value.trim();
-    const remuneracionTotal = currentUserSettings.remuneracionTotal || 0;
 
     if (isNaN(montoVenta) || montoVenta <= 0) {
         showError('Ingresa un monto de venta válido.');
         return;
     }
-    
-    if (remuneracionTotal <= 0) {
-        showError('No has configurado una "Remuneración Total" en los ajustes (⚙️).');
+    if (isNaN(cantidadArticulos) || cantidadArticulos < 0) {
+        showError('Ingresa una cantidad de artículos válida.');
         return;
     }
 
-    // New Formula Calculation
-    const comisionPorVenta = montoVenta * 0.8266 * 0.007;
-    const comisionAdicional = (remuneracionTotal * 0.0025) * 0.005;
-    const comisionTotal = comisionPorVenta + comisionAdicional;
+    // UPDATED FORMULA: ((960000 * 0.0025) * 0.005) results in 12.
+    const comisionPorArticulo = 12;
+    const comisionTotal = (montoVenta * 0.8266 * 0.007) + (cantidadArticulos * comisionPorArticulo);
 
     const newCommission = {
         numeroFactura,
         nombreCliente,
         montoVenta,
-        remuneracionTotal: remuneracionTotal, // Save the remuneration used for this calculation
+        cantidadArticulos,
         comisionCalculada: comisionTotal,
         createdAt: new Date()
     };
@@ -295,6 +251,7 @@ async function handleCalculate() {
     showResult(comisionTotal);
 
     montoVentaInput.value = '';
+    cantidadArticulosInput.value = '';
     numeroFacturaInput.value = '';
     clienteInput.value = '';
     numeroFacturaInput.focus();
@@ -337,21 +294,62 @@ function saveApiKey() {
 
 // --- AI & File Processing Functions ---
 async function extractTextFromPdf(file) {
-    // ... (This function remains the same)
+    const fileReader = new FileReader();
+    return new Promise((resolve, reject) => {
+        fileReader.onload = async function() {
+            const typedarray = new Uint8Array(this.result);
+            try {
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                if (pdf.numPages === 0) {
+                    return reject(new Error("El PDF no tiene páginas."));
+                }
+                const page = await pdf.getPage(1);
+                const textContent = await page.getTextContent();
+                resolve(textContent.items.map(item => item.str).join(' '));
+            } catch (error) {
+                reject(error);
+            }
+        };
+        fileReader.onerror = () => reject(new Error("Error al leer el archivo."));
+        fileReader.readAsArrayBuffer(file);
+    });
 }
 
 function processAIResponse(jsonResponse) {
     if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
-    // Removed quantity of articles as it's no longer in the form
+    if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
     fileStatus.textContent = '✅ ¡Información extraída con éxito!';
 }
 
 async function callGenerativeAI(payload) {
-    // ... (This function remains the same, but will be called with a new schema)
+    if (!apiKey) {
+        showError("No hay una API Key configurada para la IA.");
+        return;
+    }
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error(`Error en la API: ${response.status} ${response.statusText}`);
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+            const jsonResponse = JSON.parse(result.candidates[0].content.parts[0].text);
+            processAIResponse(jsonResponse);
+        } else {
+            throw new Error("La respuesta de la IA no tuvo el formato esperado.");
+        }
+    } catch (error) {
+        console.error("Error llamando a la IA:", error);
+        showError("La IA no pudo extraer los datos. Revisa tu API Key y el formato del archivo.");
+        fileStatus.textContent = "Error en el análisis.";
+    }
 }
 
 async function extractInfoFromText(text) {
-    const prompt = `Analiza el siguiente texto de una factura y extrae el campo 'montoVenta'. Devuelve un objeto JSON. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal. Texto a analizar: --- ${text.substring(0, 8000)} ---`;
+    const prompt = `Analiza el siguiente texto de una factura y extrae los campos 'cantidadArticulos' y 'montoVenta'. Devuelve un objeto JSON. 'cantidadArticulos' es la suma de la columna 'Cantidad'. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal. Texto a analizar: --- ${text.substring(0, 8000)} ---`;
     const payload = {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
@@ -359,7 +357,8 @@ async function extractInfoFromText(text) {
             responseSchema: {
                 type: "OBJECT",
                 properties: {
-                    montoVenta: { type: "NUMBER" }
+                    montoVenta: { type: "NUMBER" },
+                    cantidadArticulos: { type: "NUMBER" }
                 }
             }
         },
@@ -368,7 +367,7 @@ async function extractInfoFromText(text) {
 }
 
 async function extractInfoFromImage(base64Data, mimeType) {
-    const prompt = `Analiza la siguiente imagen de una factura y extrae el campo 'montoVenta'. Devuelve un objeto JSON. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal.`;
+    const prompt = `Analiza la siguiente imagen de una factura y extrae los campos 'cantidadArticulos' y 'montoVenta'. Devuelve un objeto JSON. 'cantidadArticulos' es la suma de la columna 'Cantidad'. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal.`;
     const payload = {
         contents: [{
             parts: [
@@ -381,7 +380,8 @@ async function extractInfoFromImage(base64Data, mimeType) {
             responseSchema: {
                 type: "OBJECT",
                 properties: {
-                    montoVenta: { type: "NUMBER" }
+                    montoVenta: { type: "NUMBER" },
+                    cantidadArticulos: { type: "NUMBER" }
                 }
             }
         },
@@ -390,9 +390,41 @@ async function extractInfoFromImage(base64Data, mimeType) {
 }
 
 const handleFileUpload = async (event) => {
-    // ... (This function remains largely the same, but the AI calls inside will use the new logic)
-};
+    const file = event.target.files[0];
+    if (!file) return;
 
+    const fileType = file.type;
+    fileStatus.textContent = `📖 Leyendo ${file.name}...`;
+    resultadoDiv.innerHTML = '';
+
+    try {
+        if (fileType === 'application/pdf') {
+            const pdfText = await extractTextFromPdf(file);
+            fileStatus.textContent = '🧠 Analizando texto del PDF...';
+            await extractInfoFromText(pdfText);
+        } else if (fileType.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64Data = reader.result.split(',')[1];
+                fileStatus.textContent = '🧠 Analizando imagen...';
+                await extractInfoFromImage(base64Data, fileType);
+            };
+            reader.onerror = () => {
+                throw new Error("Error al leer el archivo de imagen.");
+            };
+            reader.readAsDataURL(file);
+        } else {
+            showError("Formato de archivo no soportado. Por favor, sube un PDF o una imagen.");
+            fileStatus.textContent = "Archivo no soportado.";
+        }
+    } catch (error) {
+        console.error('Error procesando el archivo:', error);
+        showError('No se pudo procesar el archivo.');
+        fileStatus.textContent = 'Error al procesar.';
+    } finally {
+        event.target.value = '';
+    }
+};
 
 // --- Event Listeners Setup ---
 function addEventListeners() {
@@ -404,12 +436,10 @@ function addEventListeners() {
         settingsPanel.classList.toggle('hidden');
         if (!settingsPanel.classList.contains('hidden')) {
             apiKeyInput.value = localStorage.getItem('googleApiKey') || '';
-            remuneracionTotalInput.value = currentUserSettings.remuneracionTotal || 0;
         }
     });
 
     saveApiBtn.addEventListener('click', saveApiKey);
-    saveRemuneracionBtn.addEventListener('click', saveUserSettings); // New listener
     fileUploadInput.addEventListener('change', handleFileUpload);
     calcularBtn.addEventListener('click', handleCalculate);
     
@@ -422,13 +452,13 @@ function addEventListeners() {
 
     modalCancelBtn.addEventListener('click', hideConfirmationModal);
 
-    montoVentaInput.addEventListener('keypress', (e) => {
+    cantidadArticulosInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') calcularBtn.click();
     });
 }
 
 // --- Main Initialization ---
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
     const isAuthenticated = !!user;
     
     authSection.classList.toggle('hidden', isAuthenticated);
@@ -438,13 +468,11 @@ onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         userEmailSpan.textContent = user.email;
         checkApiKey();
-        await loadUserSettings(); // Load user-specific settings
         loadHistory();
     } else {
         currentUser = null;
         if (unsubscribeHistory) unsubscribeHistory();
         renderHistory([]);
-        currentUserSettings = { remuneracionTotal: 0 }; // Reset settings on logout
     }
 });
 
