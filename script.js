@@ -64,6 +64,8 @@ const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 let apiKey = '';
 let currentUser = null;
 let unsubscribeHistory = null;
+// NUEVO: Variable para rastrear el tipo de documento detectado por la IA
+let lastDetectedDocType = 'INVOICE'; 
 
 // --- Auth Functions ---
 const handleSignup = async () => {
@@ -124,6 +126,7 @@ function formatCurrency(value) {
 }
 
 // --- History & Data Functions ---
+// MODIFICADO: renderHistory ahora diferencia visualmente las Notas de Crédito
 function renderHistory(commissionHistory) {
     historyBody.innerHTML = '';
     const hasHistory = commissionHistory.length > 0;
@@ -137,20 +140,29 @@ function renderHistory(commissionHistory) {
 
     let total = 0;
     commissionHistory.forEach(item => {
+        // NUEVO: Lógica para identificar y estilizar Notas de Crédito
+        const isCreditNote = item.documentType === 'CREDIT_NOTE';
         const row = document.createElement('tr');
         row.classList.add('fade-in');
+        if (isCreditNote) {
+            row.classList.add('bg-red-50'); // Fondo rojo claro para la fila
+        }
+        
+        const commissionClass = isCreditNote ? 'text-red-700 font-bold' : 'text-gray-900 font-medium';
+        const documentTag = isCreditNote ? '<span class="ml-2 text-xs font-semibold bg-red-200 text-red-800 px-2 py-0.5 rounded-full">NC</span>' : '';
+
         row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.numeroFactura || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.numeroFactura || '-'}${documentTag}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.nombreCliente || '-'}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatCurrency(item.montoVenta)}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.cantidadArticulos}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCurrency(item.comisionCalculada)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm ${commissionClass}">${formatCurrency(item.comisionCalculada)}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                 <button data-id="${item.id}" class="text-red-600 hover:text-red-900 delete-btn">Eliminar</button>
             </td>
         `;
         historyBody.appendChild(row);
-        total += item.comisionCalculada;
+        total += item.comisionCalculada; // La comisión ya es negativa para NC, así que se resta sola
     });
     historyTotal.textContent = formatCurrency(total);
 
@@ -158,7 +170,7 @@ function renderHistory(commissionHistory) {
         button.addEventListener('click', (e) => {
             const docId = e.target.dataset.id;
             showConfirmationModal(
-                '¿Estás seguro de que quieres eliminar esta comisión?',
+                '¿Estás seguro de que quieres eliminar este registro?',
                 () => deleteCommission(docId)
             );
         });
@@ -172,7 +184,7 @@ async function saveCommission(commissionData) {
         await addDoc(userHistoryCollection, commissionData);
     } catch (error) {
         console.error("Error saving commission: ", error);
-        showError("No se pudo guardar la comisión.");
+        showError("No se pudo guardar el registro.");
     }
 }
 
@@ -188,6 +200,8 @@ function loadHistory() {
             id: doc.id,
             ...doc.data()
         }));
+        // MODIFICADO: Ordenar para mostrar los más recientes primero
+        commissionHistory.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
         renderHistory(commissionHistory);
     });
 }
@@ -199,7 +213,7 @@ async function deleteCommission(docId) {
         await deleteDoc(docRef);
     } catch (error) {
         console.error("Error deleting commission:", error);
-        showError("No se pudo eliminar la comisión.");
+        showError("No se pudo eliminar el registro.");
     }
 }
 
@@ -218,6 +232,7 @@ async function doClearAllHistory() {
     }
 }
 
+// MODIFICADO: handleCalculate ahora considera el tipo de documento
 async function handleCalculate() {
     resultadoDiv.innerHTML = '';
     const montoVenta = parseFloat(montoVentaInput.value);
@@ -234,31 +249,40 @@ async function handleCalculate() {
         return;
     }
 
-    // UPDATED FORMULA: ((960000 * 0.0025) * 0.005) results in 12.
+    // NUEVO: Detectar si es una Nota de Crédito para aplicar valores negativos
+    const isCreditNote = lastDetectedDocType === 'CREDIT_NOTE';
+    const montoCalculo = isCreditNote ? -Math.abs(montoVenta) : montoVenta;
+    const articulosCalculo = isCreditNote ? -Math.abs(cantidadArticulos) : cantidadArticulos;
+    
     const comisionPorArticulo = 12;
-    const comisionTotal = (montoVenta * 0.8266 * 0.007) + (cantidadArticulos * comisionPorArticulo);
+    const comisionTotal = (montoCalculo * 0.8266 * 0.007) + (articulosCalculo * comisionPorArticulo);
 
     const newCommission = {
         numeroFactura,
         nombreCliente,
-        montoVenta,
-        cantidadArticulos,
-        comisionCalculada: comisionTotal,
+        montoVenta: montoVenta, // Guardamos el valor original (positivo)
+        cantidadArticulos: cantidadArticulos, // Guardamos el valor original (positivo)
+        comisionCalculada: comisionTotal, // Guardamos la comisión calculada (será negativa para NC)
+        documentType: lastDetectedDocType, // NUEVO: Guardamos el tipo de documento
         createdAt: new Date()
     };
 
     await saveCommission(newCommission);
-    showResult(comisionTotal);
+    showResult(comisionTotal, isCreditNote);
 
     montoVentaInput.value = '';
     cantidadArticulosInput.value = '';
     numeroFacturaInput.value = '';
     clienteInput.value = '';
+    lastDetectedDocType = 'INVOICE'; // Resetear el tipo de documento
     numeroFacturaInput.focus();
 }
 
-function showResult(comision) {
-    resultadoDiv.innerHTML = `<div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-4 rounded-lg fade-in"><p class="font-semibold">Última Comisión Calculada:</p><p class="text-3xl font-bold mt-1">${formatCurrency(comision)}</p></div>`;
+// MODIFICADO: showResult ahora muestra un estilo diferente para Notas de Crédito
+function showResult(comision, isCreditNote = false) {
+    const bgColor = isCreditNote ? 'bg-blue-100 border-l-4 border-blue-500 text-blue-800' : 'bg-green-100 border-l-4 border-green-500 text-green-800';
+    const title = isCreditNote ? 'Comisión Restada (Nota de Crédito):' : 'Última Comisión Calculada:';
+    resultadoDiv.innerHTML = `<div class="${bgColor} p-4 rounded-lg fade-in"><p class="font-semibold">${title}</p><p class="text-3xl font-bold mt-1">${formatCurrency(comision)}</p></div>`;
 }
 
 function showError(message) {
@@ -315,10 +339,15 @@ async function extractTextFromPdf(file) {
     });
 }
 
+// MODIFICADO: processAIResponse ahora guarda el tipo de documento y actualiza el estado
 function processAIResponse(jsonResponse) {
     if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
     if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
-    fileStatus.textContent = '✅ ¡Información extraída con éxito!';
+    
+    lastDetectedDocType = jsonResponse.documentType || 'INVOICE';
+    const docTypeLabel = lastDetectedDocType === 'CREDIT_NOTE' ? 'Nota de Crédito' : 'Factura';
+    
+    fileStatus.textContent = `✅ ¡Información extraída! Tipo: ${docTypeLabel}.`;
 }
 
 async function callGenerativeAI(payload) {
@@ -348,45 +377,50 @@ async function callGenerativeAI(payload) {
     }
 }
 
+// MODIFICADO: El prompt de texto ahora también busca el tipo de documento.
 async function extractInfoFromText(text) {
-    const prompt = `Analiza el siguiente texto de una factura y extrae los campos 'cantidadArticulos' y 'montoVenta'. Devuelve un objeto JSON. 'cantidadArticulos' es la suma de la columna 'Cantidad'. 'montoVenta' es el valor numérico junto a la palabra 'TOTAL'. Trata la coma como separador decimal. Texto a analizar: --- ${text.substring(0, 8000)} ---`;
+    const prompt = `Analiza el siguiente texto y extrae 'documentType', 'cantidadArticulos' y 'montoVenta'.
+    - 'documentType': Debe ser 'CREDIT_NOTE' si encuentras las palabras "NOTA DE CREDITO". De lo contrario, debe ser 'INVOICE'.
+    - 'cantidadArticulos': Es la suma de la columna 'Cantidad'.
+    - 'montoVenta': Es el valor numérico junto a la palabra 'TOTAL' o 'Cta. Cte.'.
+    Devuelve un objeto JSON. Trata la coma como separador decimal.
+    Texto a analizar: --- ${text.substring(0, 8000)} ---`;
+    
     const payload = {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
             responseMimeType: "application/json",
+            // MODIFICADO: El schema ahora incluye documentType
             responseSchema: {
                 type: "OBJECT",
                 properties: {
+                    documentType: { type: "STRING", enum: ["INVOICE", "CREDIT_NOTE"] },
                     montoVenta: { type: "NUMBER" },
                     cantidadArticulos: { type: "NUMBER" }
-                }
+                },
+                required: ["documentType"]
             }
         },
     };
     await callGenerativeAI(payload);
 }
 
+// MODIFICADO: El prompt de imagen ahora está entrenado para Notas de Crédito.
 async function extractInfoFromImage(base64Data, mimeType) {
-    // --- UPDATED PROMPT ---
     const prompt = `
-    Analiza la imagen del documento (factura, remito, etc.) y extrae 'cantidadArticulos' y 'montoVenta' en formato JSON.
-    Considera estos posibles formatos y busca las palabras clave:
+    Analiza la imagen del documento y extrae 'documentType', 'cantidadArticulos' y 'montoVenta' en formato JSON.
 
-    FORMATO 1 (Factura Tradicional Simple):
-    - Para 'cantidadArticulos', busca una columna con el encabezado "Cantidad". Suma los valores de esa columna.
-    - Para 'montoVenta', busca la palabra "TOTAL" y extrae el valor numérico asociado.
+    PASO 1: IDENTIFICAR TIPO DE DOCUMENTO
+    - Busca prominentemente el texto "NOTA DE CREDITO". Si lo encuentras, el 'documentType' es "CREDIT_NOTE".
+    - Si no, asume que el 'documentType' es "INVOICE" (Factura).
 
-    FORMATO 2 (Remito o Nota de Entrega):
-    - Para 'cantidadArticulos', busca una columna con encabezados como "Unidades", "Bultos", o "Cant.". Suma los valores.
-    - Para 'montoVenta', que puede no ser un total final, busca palabras como "Subtotal", "Valor Declarado" o el importe más alto en una lista de precios.
-
-    FORMATO 3 (Factura de Sistema tipo "TOTVS"):
-    - Para 'cantidadArticulos', busca una columna de números sin encabezado explícito, ubicada entre la descripción del producto y el precio unitario. Suma los valores de esa columna.
-    - Para 'montoVenta', busca la palabra "Total:" (con dos puntos) en el resumen de la derecha y extrae el valor numérico. También puede estar abajo con la etiqueta "Cta. Cte.". Prioriza el valor junto a "Total:".
+    PASO 2: EXTRAER DATOS (Las reglas son similares para ambos tipos de documento)
+    - 'cantidadArticulos': Busca una columna con encabezados como "Cantidad", "Cant.", "Unidades", o una columna de números entre la descripción y el precio. Suma los valores de esa columna.
+    - 'montoVenta': Busca una palabra clave como "TOTAL", "Total:", o "Cta. Cte." y extrae el valor numérico final asociado a ella.
 
     REGLAS GENERALES:
     - Siempre trata la coma (,) como separador decimal y el punto (.) como separador de miles.
-    - Si no encuentras un valor, devuélvelo como 'null'.
+    - Si no encuentras un valor numérico, devuélvelo como 'null'.
     - Devuelve únicamente el objeto JSON como respuesta.
     `;
     
@@ -399,12 +433,15 @@ async function extractInfoFromImage(base64Data, mimeType) {
         }],
         generationConfig: {
             responseMimeType: "application/json",
+            // MODIFICADO: El schema ahora incluye documentType
             responseSchema: {
                 type: "OBJECT",
                 properties: {
+                    documentType: { type: "STRING", enum: ["INVOICE", "CREDIT_NOTE"] },
                     montoVenta: { type: "NUMBER" },
                     cantidadArticulos: { type: "NUMBER" }
-                }
+                },
+                 required: ["documentType"]
             }
         },
     };
@@ -415,6 +452,7 @@ const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    lastDetectedDocType = 'INVOICE'; // Resetear al subir un nuevo archivo
     const fileType = file.type;
     fileStatus.textContent = `📖 Leyendo ${file.name}...`;
     resultadoDiv.innerHTML = '';
