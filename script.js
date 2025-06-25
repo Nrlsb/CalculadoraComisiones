@@ -15,7 +15,8 @@ import {
     deleteDoc,
     doc,
     query,
-    onSnapshot
+    onSnapshot,
+    orderBy // MODIFICADO: Se importa 'orderBy' para ordenar en la consulta
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Firebase Initialization ---
@@ -64,7 +65,6 @@ const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 let apiKey = '';
 let currentUser = null;
 let unsubscribeHistory = null;
-// NUEVO: Variable para rastrear el tipo de documento detectado por la IA
 let lastDetectedDocType = 'INVOICE'; 
 
 // --- Auth Functions ---
@@ -126,7 +126,6 @@ function formatCurrency(value) {
 }
 
 // --- History & Data Functions ---
-// MODIFICADO: renderHistory ahora diferencia visualmente las Notas de Crédito
 function renderHistory(commissionHistory) {
     historyBody.innerHTML = '';
     const hasHistory = commissionHistory.length > 0;
@@ -140,12 +139,11 @@ function renderHistory(commissionHistory) {
 
     let total = 0;
     commissionHistory.forEach(item => {
-        // NUEVO: Lógica para identificar y estilizar Notas de Crédito
         const isCreditNote = item.documentType === 'CREDIT_NOTE';
         const row = document.createElement('tr');
         row.classList.add('fade-in');
         if (isCreditNote) {
-            row.classList.add('bg-red-50'); // Fondo rojo claro para la fila
+            row.classList.add('bg-red-50');
         }
         
         const commissionClass = isCreditNote ? 'text-red-700 font-bold' : 'text-gray-900 font-medium';
@@ -162,7 +160,7 @@ function renderHistory(commissionHistory) {
             </td>
         `;
         historyBody.appendChild(row);
-        total += item.comisionCalculada; // La comisión ya es negativa para NC, así que se resta sola
+        total += item.comisionCalculada;
     });
     historyTotal.textContent = formatCurrency(total);
 
@@ -188,20 +186,22 @@ async function saveCommission(commissionData) {
     }
 }
 
+// MODIFICADO: La función loadHistory ahora ordena directamente desde Firestore.
 function loadHistory() {
     if (!currentUser) return;
     if (unsubscribeHistory) unsubscribeHistory();
 
     const userHistoryCollection = collection(db, 'users', currentUser.uid, 'history');
-    const q = query(userHistoryCollection);
+    // La consulta ahora ordena los resultados por fecha de creación descendente.
+    // Esto asegura que el registro más nuevo siempre esté primero de forma eficiente.
+    const q = query(userHistoryCollection, orderBy("createdAt", "desc"));
 
     unsubscribeHistory = onSnapshot(q, (snapshot) => {
         const commissionHistory = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         }));
-        // MODIFICADO: Ordenar para mostrar los más recientes primero
-        commissionHistory.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+        // La clasificación del lado del cliente ya no es necesaria, la base de datos se encarga.
         renderHistory(commissionHistory);
     });
 }
@@ -232,7 +232,6 @@ async function doClearAllHistory() {
     }
 }
 
-// MODIFICADO: handleCalculate ahora considera el tipo de documento
 async function handleCalculate() {
     resultadoDiv.innerHTML = '';
     const montoVenta = parseFloat(montoVentaInput.value);
@@ -249,7 +248,6 @@ async function handleCalculate() {
         return;
     }
 
-    // NUEVO: Detectar si es una Nota de Crédito para aplicar valores negativos
     const isCreditNote = lastDetectedDocType === 'CREDIT_NOTE';
     const montoCalculo = isCreditNote ? -Math.abs(montoVenta) : montoVenta;
     const articulosCalculo = isCreditNote ? -Math.abs(cantidadArticulos) : cantidadArticulos;
@@ -260,10 +258,10 @@ async function handleCalculate() {
     const newCommission = {
         numeroFactura,
         nombreCliente,
-        montoVenta: montoVenta, // Guardamos el valor original (positivo)
-        cantidadArticulos: cantidadArticulos, // Guardamos el valor original (positivo)
-        comisionCalculada: comisionTotal, // Guardamos la comisión calculada (será negativa para NC)
-        documentType: lastDetectedDocType, // NUEVO: Guardamos el tipo de documento
+        montoVenta: montoVenta,
+        cantidadArticulos: cantidadArticulos,
+        comisionCalculada: comisionTotal,
+        documentType: lastDetectedDocType,
         createdAt: new Date()
     };
 
@@ -274,11 +272,10 @@ async function handleCalculate() {
     cantidadArticulosInput.value = '';
     numeroFacturaInput.value = '';
     clienteInput.value = '';
-    lastDetectedDocType = 'INVOICE'; // Resetear el tipo de documento
+    lastDetectedDocType = 'INVOICE';
     numeroFacturaInput.focus();
 }
 
-// MODIFICADO: showResult ahora muestra un estilo diferente para Notas de Crédito
 function showResult(comision, isCreditNote = false) {
     const bgColor = isCreditNote ? 'bg-blue-100 border-l-4 border-blue-500 text-blue-800' : 'bg-green-100 border-l-4 border-green-500 text-green-800';
     const title = isCreditNote ? 'Comisión Restada (Nota de Crédito):' : 'Última Comisión Calculada:';
@@ -339,7 +336,6 @@ async function extractTextFromPdf(file) {
     });
 }
 
-// MODIFICADO: processAIResponse ahora guarda el tipo de documento y actualiza el estado
 function processAIResponse(jsonResponse) {
     if (jsonResponse.montoVenta != null) montoVentaInput.value = jsonResponse.montoVenta;
     if (jsonResponse.cantidadArticulos != null) cantidadArticulosInput.value = jsonResponse.cantidadArticulos;
@@ -377,7 +373,6 @@ async function callGenerativeAI(payload) {
     }
 }
 
-// MODIFICADO: El prompt de texto ahora también busca el tipo de documento.
 async function extractInfoFromText(text) {
     const prompt = `Analiza el siguiente texto y extrae 'documentType', 'cantidadArticulos' y 'montoVenta'.
     - 'documentType': Debe ser 'CREDIT_NOTE' si encuentras las palabras "NOTA DE CREDITO". De lo contrario, debe ser 'INVOICE'.
@@ -390,7 +385,6 @@ async function extractInfoFromText(text) {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
             responseMimeType: "application/json",
-            // MODIFICADO: El schema ahora incluye documentType
             responseSchema: {
                 type: "OBJECT",
                 properties: {
@@ -405,7 +399,6 @@ async function extractInfoFromText(text) {
     await callGenerativeAI(payload);
 }
 
-// MODIFICADO: El prompt de imagen ahora está entrenado para Notas de Crédito.
 async function extractInfoFromImage(base64Data, mimeType) {
     const prompt = `
     Analiza la imagen del documento y extrae 'documentType', 'cantidadArticulos' y 'montoVenta' en formato JSON.
@@ -433,7 +426,6 @@ async function extractInfoFromImage(base64Data, mimeType) {
         }],
         generationConfig: {
             responseMimeType: "application/json",
-            // MODIFICADO: El schema ahora incluye documentType
             responseSchema: {
                 type: "OBJECT",
                 properties: {
@@ -452,7 +444,7 @@ const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    lastDetectedDocType = 'INVOICE'; // Resetear al subir un nuevo archivo
+    lastDetectedDocType = 'INVOICE';
     const fileType = file.type;
     fileStatus.textContent = `📖 Leyendo ${file.name}...`;
     resultadoDiv.innerHTML = '';
